@@ -20,6 +20,10 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
     text: widget.controller.options.timeOffset.inMilliseconds.toString(),
   );
 
+  /// Tracks focus so an offset changed elsewhere never overwrites what the
+  /// user is in the middle of typing.
+  final FocusNode _focusNode = FocusNode();
+
   static final ButtonStyle _stepButtonStyle = OutlinedButton.styleFrom(
     minimumSize: const Size(0, 32),
     padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
@@ -31,9 +35,50 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
   int get _step => SubtitleDefaults.timeOffsetStep.inMilliseconds;
 
   @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_syncFromOptions);
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  @override
+  void didUpdateWidget(TimeOffsetField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_syncFromOptions);
+      widget.controller.addListener(_syncFromOptions);
+      _syncFromOptions();
+    }
+  }
+
+  @override
   void dispose() {
+    widget.controller.removeListener(_syncFromOptions);
+    _focusNode.removeListener(_onFocusChanged);
+    _focusNode.dispose();
     _text.dispose();
     super.dispose();
+  }
+
+  /// Mirrors an offset set outside this field, which is what happens when
+  /// persisted settings finish loading after the first build.
+  void _syncFromOptions() {
+    if (_focusNode.hasFocus) {
+      return;
+    }
+    final String value =
+        widget.controller.options.timeOffset.inMilliseconds.toString();
+    if (_text.text != value) {
+      _text.text = value;
+      _text.selection = TextSelection.collapsed(offset: value.length);
+    }
+  }
+
+  void _onFocusChanged() {
+    if (!_focusNode.hasFocus) {
+      // Drop an incomplete value such as a lone '-' when focus leaves.
+      _syncFromOptions();
+    }
   }
 
   @override
@@ -49,12 +94,15 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
               width: 56,
               child: TextField(
                 controller: _text,
+                focusNode: _focusNode,
                 style: AppTextStyles.body,
                 keyboardType: const TextInputType.numberWithOptions(
                   signed: true,
                 ),
+                // Digits and a minus sign only; onChanged ignores anything that
+                // does not parse, so a half-typed value is never applied.
                 inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.allow(RegExp(r'^-?\d*')),
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9-]')),
                 ],
                 decoration: const InputDecoration(
                   isDense: true,
