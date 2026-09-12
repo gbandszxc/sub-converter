@@ -339,6 +339,20 @@ List<_Segment> _segments(String text, List<InlineStyleRange> ranges) {
 String _normalizeNewlines(String value) =>
     value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
+/// Matches `{...}` blocks that contain an ASS override command, e.g.
+/// `{\an8}`, `{\bord2}`, `{\i1}`.
+///
+/// Braces without a backslash command (`{laughs}`) are left alone, so ordinary
+/// prose survives.
+final RegExp _assOverrideBlock = RegExp(r'\{(?:[^{}\\]|\\.)*\\[a-zA-Z][^{}]*\}');
+
+/// Removes ASS/SSA override blocks (`{\an8}`, `{\pos(10,20)}`, ...) from text.
+///
+/// SRT and WebVTT files in the wild often carry these tags; leaving them in
+/// would surface as visible garbage after conversion.
+String stripAssOverrideBlocks(String raw) =>
+    raw.replaceAll(_assOverrideBlock, '');
+
 class _Segment {
   const _Segment(this.start, this.end, this.styles);
 
