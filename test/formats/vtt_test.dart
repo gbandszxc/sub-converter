@@ -285,4 +285,40 @@ void main() {
       );
     });
   });
+
+  group('missing blank line after the header', () {
+    test('a cue immediately after WEBVTT is parsed, not swallowed', () {
+      const String content = 'WEBVTT\n'
+          '00:00:01.000 --> 00:00:02.000\n'
+          'Hello\n';
+      final document = const VttParser().parse(content);
+      expect(document.cues.length, 1);
+      expect(document.cues.single.text, 'Hello');
+      expect(document.cues.single.start, const Duration(seconds: 1));
+      expect(document.cues.single.end, const Duration(seconds: 2));
+      expect(document.metadata.fields, isEmpty);
+    });
+
+    test('header fields still parse before a cue with no blank line', () {
+      const String content = 'WEBVTT\n'
+          'Kind: captions\n'
+          'Language: ja\n'
+          '00:00:01.000 --> 00:00:02.000\n'
+          '日本語\n'
+          '\n'
+          '00:00:03.000 --> 00:00:04.000\n'
+          'two\n';
+      final document = const VttParser().parse(content);
+      expect(document.metadata.fields['Kind'], 'captions');
+      expect(document.metadata.language, 'ja');
+      expect(document.cues.length, 2);
+      expect(document.cues.first.text, '日本語');
+      expect(document.cues.last.text, 'two');
+    });
+
+    test('a normal blank-line separated file is unaffected', () {
+      final document = const VttParser().parse(fixture('basic.vtt'));
+      expect(document.cues, isNotEmpty);
+    });
+  });
 }

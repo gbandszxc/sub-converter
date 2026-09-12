@@ -65,6 +65,13 @@ class VttParser implements SubtitleParser {
     bool isFirstHeaderLine = true;
     while (cursor < lines.length && lines[cursor].trim().isNotEmpty) {
       final String line = lines[cursor];
+      // A timing line means the header has ended, even when the blank line that
+      // should separate them is missing: some files go straight from WEBVTT to
+      // the first cue, and reading that line as a header field would silently
+      // swallow it.
+      if (line.contains(_timingArrow)) {
+        break;
+      }
       final int separator = _separatorIndex(line);
       if (separator >= 0) {
         final String key = line.substring(0, separator).trim();
