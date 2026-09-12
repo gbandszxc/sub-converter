@@ -123,31 +123,44 @@ abstract final class HtmlMarkup {
     }
 
     final StringBuffer output = StringBuffer();
-    Set<InlineStyle> active = const <InlineStyle>{};
+    // Open styles are tracked as an ordered stack so tags nest correctly:
+    // styles are opened in a fixed order and closed in reverse.
+    final List<InlineStyle> active = <InlineStyle>[];
     int cursor = 0;
 
     for (final _Segment segment in _segments(source, canonical)) {
       if (segment.start > cursor) {
         _writeText(output, source.substring(cursor, segment.start), escape);
       }
-      for (final InlineStyle style in active.difference(segment.styles)) {
-        output.write(_closingTag(style));
+      for (int i = active.length - 1; i >= 0; i--) {
+        final InlineStyle style = active[i];
+        if (!segment.styles.contains(style)) {
+          output.write(_closingTag(style));
+          active.removeAt(i);
+        }
       }
-      for (final InlineStyle style in segment.styles.difference(active)) {
-        output.write(_openingTag(style));
+      for (final InlineStyle style in _orderedStyles(segment.styles)) {
+        if (!active.contains(style)) {
+          output.write(_openingTag(style));
+          active.add(style);
+        }
       }
-      active = segment.styles;
       _writeText(output, source.substring(segment.start, segment.end), escape);
       cursor = segment.end;
     }
     if (cursor < source.length) {
       _writeText(output, source.substring(cursor), escape);
     }
-    for (final InlineStyle style in active) {
-      output.write(_closingTag(style));
+    for (int i = active.length - 1; i >= 0; i--) {
+      output.write(_closingTag(active[i]));
     }
     return output.toString();
   }
+
+  /// Deterministic opening order, so the same document always renders the same
+  /// bytes. [InlineStyle.values] order is bold, italic, underline, strike.
+  static List<InlineStyle> _orderedStyles(Set<InlineStyle> styles) =>
+      InlineStyle.values.where(styles.contains).toList(growable: false);
 
   static void _writeText(StringBuffer output, String value, bool escape) {
     output.write(escape ? HtmlEntities.escape(value) : value);
@@ -339,19 +352,41 @@ List<_Segment> _segments(String text, List<InlineStyleRange> ranges) {
 String _normalizeNewlines(String value) =>
     value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
-/// Matches `{...}` blocks that contain an ASS override command, e.g.
-/// `{\an8}`, `{\bord2}`, `{\i1}`.
+/// The ASS/SSA override commands that may legitimately appear inside `{...}`.
 ///
-/// Braces without a backslash command (`{laughs}`) are left alone, so ordinary
-/// prose survives.
-final RegExp _assOverrideBlock = RegExp(r'\{(?:[^{}\\]|\\.)*\\[a-zA-Z][^{}]*\}');
+/// Longer commands come first so the alternation cannot stop at a shorter
+/// prefix. A command must also be delimited (see the `(?![A-Za-z])` guard), so
+/// prose containing a Windows path (`{C:\path}`) is not mistaken for a tag.
+const List<String> _assCommands = <String>[
+  'alpha', 'fade', 'move', 'clip', 'bord', 'shad', 'blur', 'frz', 'fsp',
+  'pos', 'org', 'fad', 'fr', 'fn', 'fs', 'fe', 'be', 'kf', 'ko', 'an',
+  '1c', '2c', '3c', '4c', 't', 'k', 'K', 'b', 'i', 'u', 's', 'r', 'p',
+  'q', 'c', 'a',
+];
+
+/// Matches `{...}` blocks that contain a real ASS override command, e.g.
+/// `{\an8}`, `{\bord2}`, `{\i1}`, `{\pos(10,20)}`, `{\t(0,500,\fs30)}`.
+final RegExp _assOverrideBlock = RegExp(
+  r'\{(?:[^{}\\]|\\.)*?\\'
+  '(?:${_assCommands.join('|')})'
+  r'(?![A-Za-z])[^{}]*\}',
+);
+
+/// Matches an unterminated override block, e.g. a truncated `{\b1`, so a broken
+/// tag cannot leak into the visible text.
+final RegExp _assOverrideBlockToEndOfLine = RegExp(
+  '\\{\\\\(?:${_assCommands.join('|')})(?![A-Za-z])[^{}\\n]*\$',
+  multiLine: true,
+);
 
 /// Removes ASS/SSA override blocks (`{\an8}`, `{\pos(10,20)}`, ...) from text.
 ///
 /// SRT and WebVTT files in the wild often carry these tags; leaving them in
-/// would surface as visible garbage after conversion.
-String stripAssOverrideBlocks(String raw) =>
-    raw.replaceAll(_assOverrideBlock, '');
+/// would surface as visible garbage after conversion. Only recognisable
+/// override commands are removed, so braces used as ordinary punctuation stay.
+String stripAssOverrideBlocks(String raw) => raw
+    .replaceAll(_assOverrideBlock, '')
+    .replaceAll(_assOverrideBlockToEndOfLine, '');
 
 class _Segment {
   const _Segment(this.start, this.end, this.styles);
