@@ -16,7 +16,7 @@
 ```bash
 flutter pub get
 flutter analyze                  # 必须 "No issues found!"（0 issue）
-flutter test                     # 必须全绿；当前 331 个测试
+flutter test                     # 必须全绿；当前 346 个测试
 flutter build windows --release  # 产物 build\windows\x64\runner\Release\
 flutter build macos   --release
 flutter build linux   --release
@@ -52,7 +52,10 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 | 检测不能只看扩展名 | 内容优先，扩展名只是加分项 | `test/services/conversion_matrix_test.dart` |
 | 无网络、无外部进程 | 不得引入 ffmpeg / Python / Node / HTTP 调用 | 审查 + 依赖白名单 |
 | 只做 v0.1 范围 | 不加入播放、预览、OCR、翻译、下载、账号、云同步等 | README「范围」段 |
-| 注释用英文 | 代码、脚本、提交信息用英文；面向用户的文档中英各一份 | 审查 |
+| 注释用英文 | 代码与脚本注释用英文；面向用户的文档中英各一份；提交信息描述可用中文或英文（本仓库历史两者都有） | 审查 |
+| 界面文案必须双语齐备 | 新增/修改任何用户可见文案，必须同时改 `lib/i18n/strings_en.dart` 与 `strings_zh.dart`；基类是抽象类，漏翻即编译错误 | `test/i18n/strings_test.dart`（另查空串、查中文误留英文） |
+| 纯层不得依赖 i18n | `lib/models`、`lib/formats`、`lib/services` 不得 import `lib/i18n` 或 `package:flutter`；模型/服务只产出枚举等结构（如 `LossKind`、`ConversionFailure`），句子由 UI 组装 | 审查（`grep -rn "i18n/\|package:flutter" lib/models lib/formats lib/services` 应为空） |
+| 语言设置默认跟随系统 | 新增用户可见设置项时，默认值应最少惊讶；语言默认 `AppLanguage.system`，持久化键 `language` | `test/i18n/localization_widget_test.dart` |
 | 不提交构建产物 | `build/`、`packaging/msi/.tools/`、`packaging/msi/.build/` 已 gitignore | `.gitignore` |
 | MSI 开始菜单必须用 `ProgramMenuFolder` | 它是 MSI 的系统文件夹属性（per-machine 时解析到 all-users 开始菜单）；`CommonProgramsFolder` **不是** MSI 属性，会被静默回退到 `TARGETDIR` | `packaging/msi/Product.wxs` 注释 + 安装日志（`/l*v`） |
 | WiX 告警要么修要么写清理由 | `-sreg` 关掉 DLL self-reg 探测；ICE60 因 `MaterialIcons-Regular.otf` 是 Flutter 资源、**不该**注册为系统字体而有意抑制 | `packaging/msi/build-msi.ps1` 注释 |
@@ -90,12 +93,14 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
    `docs/ARCHITECTURE.md`。校验：`test/widget/app_controller_test.dart`。
 6. **编码候选清单** —— 两份 README 的编码表与 `EncodingService.legacyEncodingNames`。
 7. **已注册格式** —— `SubtitleFormat` 枚举与 `lib/formats/built_in_formats.dart` 必须一致（6 种）。
+8. **界面文案** —— 两份 README 只描述功能，具体文案以 `lib/i18n/strings_*.dart` 为准；新增语言时
+   `AppLanguage`、`resolve()`、文案表与语言下拉三处都要改，并同步 `supportedLocales`。
 
 ## 6. 提交前自检
 
 ```bash
 flutter analyze   # 0 issue
-flutter test      # 全绿（当前 331）
+flutter test      # 全绿（当前 346）
 ```
 
 - [ ] 若改动用户可见行为 → 更新两份 README；涉及打包 → 更新 `packaging/msi/README.md`

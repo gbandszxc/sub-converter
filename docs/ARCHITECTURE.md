@@ -79,6 +79,10 @@ Rules:
 - **`FileService` is the only service that touches disk.** Everything below it is synchronous
   and unit-testable without a temporary directory.
 - **Dependencies point downward.** No service imports a screen; no parser imports a service.
+- **Only the UI knows the locale.** `lib/i18n` is imported by `lib/main.dart`, `lib/screens`
+  and `lib/widgets` and by nothing below them. `lib/models`, `lib/formats` and
+  `lib/services` emit structured values — `LossKind`, `ConversionFailure`, counts, paths —
+  and never a sentence, so they stay pure and locale-free.
 
 `FileService` composes the others and injects them (registry, encoding service, converter,
 detector, path resolver) so tests can substitute fakes and a custom registry.
@@ -126,7 +130,9 @@ styles, so keeping the source spelling is both simpler and lossless for ASS/SSA 
 
 ### `SubtitleFormat` (`subtitle_format.dart`)
 
-The enum of the six formats, each carrying `label`, canonical `extension` and `description`.
+The enum of the six formats, each carrying `label` (SRT, VTT, ... — language-neutral) and
+the canonical `extension`. Display text, including the per-format description, lives in the
+string tables instead: the model layer must not know the locale.
 Adding a format starts here.
 
 ### `FormatDescriptor` + `FormatSignature` + `FormatRegistry`
@@ -159,6 +165,7 @@ Adding a format starts here.
 | Output naming / conflict rules | `lib/services/output_path_resolver.dart` |
 | Batch orchestration and IO | `lib/services/file_service.dart` |
 | Persistence seam | `lib/services/settings_store.dart` |
+| UI strings, language choice | `lib/i18n/` (`strings_en.dart`, `strings_zh.dart`, `app_strings.dart`, `app_language.dart`) |
 
 Shared code is factored so dialects and formats do not duplicate each other: `ass/` holds one
 dialect-parameterised parser/writer/text-codec serving both ASS and SSA, and
@@ -175,8 +182,11 @@ times nor line breaks), and each writer knows its own output grammar.
 
 A conversion that loses information still succeeds — loss is a value, not an error.
 `LossAnalyzer.analyze` compares the document against the target descriptor and returns a
-`LossReport` of user-facing warnings, which `ConversionResult.warnings` carries to the UI; a
-result with warnings is still `succeeded` and `ConversionResult.isLossy` is true.
+`LossReport` of structured `LossWarning`s (`LossKind` plus a count, see
+`lib/models/loss_report.dart`), which `ConversionResult.warnings` carries to the UI; a result
+with warnings is still `succeeded` and `ConversionResult.isLossy` is true. The kinds are not
+sentences: the UI turns each one into localized text with the target format label, which is
+why the analyzer can stay pure and locale-free.
 
 It also reports one source-side oddity: a cue whose end precedes its start. That is usually a
 typo in the source, but the file still converts — rejecting a whole file over one bad cue would
@@ -222,7 +232,10 @@ files are only ever opened for reading. Conversion happens on a copy of the pars
 `lib/models/subtitle_exception.dart` defines `ConversionFailure`, the user-facing reason enum:
 `unsupportedFormat`, `encodingDetectionFailed`, `invalidSubtitleSyntax`, `emptyDocument`,
 `cannotWriteOutput`, `permissionDenied`, `targetPathUnavailable`, `readFailed`, `unknown`. Each
-carries a short title and a one-sentence message.
+carries a short English title and a one-sentence message. Those are the developer-facing
+diagnostic (tests and logs use them); the UI shows the localized title from
+`AppStrings.failureTitle` instead, and the technical `detail` only for the kinds whose text
+is a path or file name.
 
 `SubtitleConversionException` wraps a `ConversionFailure` with a single-line technical detail
 and an optional `cause` for debug logs only; `userMessage` is what the UI shows. Parsers throw
@@ -236,6 +249,33 @@ and a short `detail` (never a stack trace). `convertAll` loops over the paths, r
 after each file and continues, so one broken file cannot stop a batch. The only exceptions that
 escape a single conversion are programming errors, and the controller catches those to set a
 batch message.
+
+## Localization
+
+`lib/i18n/` holds two hand-written `AppStrings` tables (English, Simplified Chinese) rather than
+generated ARB files: this is a single-window app with no navigation and no `intl` formatting
+needs, so a codegen pipeline would add a dependency and build steps for nothing.
+
+- `AppStrings` is abstract, so a forgotten translation is a compile error. The runtime checks a
+  compiler cannot do live in `test/i18n/strings_test.dart`: every member is called, no value may
+  be empty, and no Chinese entry may equal its English counterpart except an explicit allow-list
+  (the language names, and format names that are proper nouns).
+- `StringsScope` carries the active table down the tree and **throws** when it is missing, rather
+  than silently falling back to English and showing the wrong language.
+- `AppLanguage` holds no display text. `resolve(Locale)` is the whole auto-detect rule: `system`
+  becomes `chinese` for any `zh*` locale and `english` otherwise, and a pinned choice wins. The
+  app ships one Chinese translation, so Traditional locales get Simplified rather than English.
+- `main.dart` resolves the effective language, wraps `MaterialApp` in a `StringsScope`, and pins
+  `MaterialApp.locale` to match, with the Flutter localization delegates for Material's own
+  strings. Rebuilding is driven by the controller, so switching languages updates the window
+  immediately and needs no restart.
+- The language is an app setting, not a conversion option, so it lives on `AppController` and is
+  persisted under the `language` settings key (default `system`).
+
+What is deliberately **not** localized: parser and service `detail` strings. Parsers must stay
+locale-free (see the layering rules), so those messages remain English diagnostics. The row shows
+the localized reason plus the English detail only for the kinds that carry a path, and the paths
+themselves are language-neutral.
 
 ## Deliberate v0.1 simplifications
 

@@ -3,7 +3,8 @@
 [English](README.md) | **简体中文**
 
 一个轻量、完全离线的桌面字幕格式转换工具，支持六种文本字幕格式互转：SRT、WebVTT、LRC、
-ASS、SSA、YouTube SBV。纯 Flutter 桌面应用：不上传任何文件，不依赖 FFmpeg / Python / Node，
+ASS、SSA、YouTube SBV。界面提供简体中文与英文：默认跟随系统语言，也可在应用内随时切换。
+纯 Flutter 桌面应用：不上传任何文件，不依赖 FFmpeg / Python / Node，
 运行期无需联网，无需额外安装运行时。把字幕拖进窗口、选目标格式，转换结果以 UTF-8 写在源文件
 所在目录（或你指定的目录）。
 
@@ -96,6 +97,7 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 | 冲突策略 | 自动改名、覆盖、跳过 | 自动改名 |
 | 时间偏移 | 带符号毫秒（可输入，或用 ±500 ms 步进，可重置） | 0 ms |
 | 写入 UTF-8 BOM | 开 / 关 | 关 |
+| 界面语言 | 跟随系统、English、简体中文 | 跟随系统 |
 
 时间统一平移并在 0 处截断，因此负偏移不会产生负时间戳。覆盖策略会替换已存在的**输出**文件，
 但仍拒绝替换源文件。设置项（目标格式、输出位置、指定目录、冲突策略、偏移、BOM）通过
@@ -131,7 +133,7 @@ UTF-8，否则按 Windows-1252 读取。检测失败会按文件报错，而不�
 flutter test
 ```
 
-当前共 **331 个测试，全部通过**。覆盖范围：
+当前共 **346 个测试，全部通过**。覆盖范围：
 
 - **核心**：时间戳解析/格式化规则、统一模型（`SubtitleDocument`/`SubtitleCue`）、共享的行内标记扫描器。
 - **各格式**：SRT、VTT、LRC、ASS、SSA、SBV 各自独立的 parser/writer 测试，使用真实 fixture（含中日文与含标签的文件）。
@@ -149,11 +151,11 @@ flutter test
 
 | 平台 | Runner | 测试 | Release 构建 | 启动 |
 | --- | --- | --- | --- | --- |
-| Windows | `windows-latest` | 331 通过 | `sub_converter.exe` | 是，12 秒后仍存活 |
-| macOS | `macos-latest` | 331 通过 | `Subtitle Converter.app`（45.4 MB） | 是，12 秒后仍存活 |
-| Linux | `ubuntu-latest` | 331 通过 | `sub_converter` bundle | 是，15 秒后仍存活 |
+| Windows | `windows-latest` | 346 通过 | `sub_converter.exe` | 是，12 秒后仍存活 |
+| macOS | `macos-latest` | 346 通过 | `Subtitle Converter.app`（45.4 MB） | 是，12 秒后仍存活 |
+| Linux | `ubuntu-latest` | 346 通过 | `sub_converter` bundle | 是，15 秒后仍存活 |
 
-最近一次验证：commit `4d2c44a`，CI run 34693848998，三个 job 全绿。Linux job 在 `Xvfb` 下以
+最近一次验证：commit `480c053`，CI run 34697190030，三个 job 全绿。Linux job 在 `Xvfb` 下以
 `LIBGL_ALWAYS_SOFTWARE=1` 启动，因为无头 runner 既没有显示器也没有 GPU。
 
 有一处行为是**有意按平台区分**的，而且正是 CI 把它暴露出来的：路径去重**只在 Windows** 上
@@ -220,6 +222,8 @@ lib/
     app_controller.dart         全部 UI 状态；委托给 FileService。
     home_screen.dart            单窗口、拖放目标与快捷键。
   widgets/                      头部、文件列表、选项面板、状态栏。
+  i18n/                         文案表（en、zh）、AppLanguage，以及把文案交给
+                                widget 的 StringsScope。
   utils/                        时间戳、行内标记、默认值。
 test/
   core/ formats/ services/ widget/ integration/

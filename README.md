@@ -3,7 +3,9 @@
 **English** | [简体中文](README.zh-CN.md)
 
 A lightweight, fully offline desktop tool that converts text subtitle files between six
-formats (SRT, WebVTT, LRC, ASS, SSA and YouTube SBV). It is a plain Flutter desktop app:
+formats (SRT, WebVTT, LRC, ASS, SSA and YouTube SBV). The interface is available in
+English and Simplified Chinese: it follows the system language by default and can be
+switched at any time in the app. It is a plain Flutter desktop app:
 nothing is uploaded, there is no FFmpeg, Python or Node dependency, no network access and no
 installer runtime is needed. Drop in files, pick a target format, and the converted files are
 written next to the source (or into a folder you choose) as UTF-8.
@@ -102,6 +104,7 @@ when the only collision would be the source.
 | Conflict policy | Auto rename, Overwrite, Skip | Auto rename |
 | Time offset | Signed milliseconds (typed, or stepped by ±500 ms, with reset) | 0 ms |
 | Write UTF-8 BOM | On / off | Off |
+| Language | Follow system, English, 简体中文 | Follow system |
 
 Times are shifted uniformly and clamped at zero, so a negative offset never produces a negative
 timestamp. The overwrite policy replaces an existing *output* file but still refuses to replace
@@ -141,7 +144,7 @@ valid UTF-8. Detection failures are reported per file rather than guessed throug
 flutter test
 ```
 
-The suite currently contains **331 tests, all passing**. Coverage:
+The suite currently contains **346 tests, all passing**. Coverage:
 
 - **Core**: timestamp parse/format rules, the unified model (`SubtitleDocument`/`SubtitleCue`), and the shared inline-markup scanner.
 - **Formats**: dedicated parser/writer tests for each of SRT, VTT, LRC, ASS, SSA and SBV, exercised against real fixtures (including CJK and tag-heavy files).
@@ -160,11 +163,11 @@ release build, and then **launches the built artifact and asserts it stays alive
 
 | Target | Runner | Tests | Release build | Launches |
 | --- | --- | --- | --- | --- |
-| Windows | `windows-latest` | 331 passed | `sub_converter.exe` | yes, alive after 12s |
-| macOS | `macos-latest` | 331 passed | `Subtitle Converter.app` (45.4 MB) | yes, alive after 12s |
-| Linux | `ubuntu-latest` | 331 passed | `sub_converter` bundle | yes, alive for 15s |
+| Windows | `windows-latest` | 346 passed | `sub_converter.exe` | yes, alive after 12s |
+| macOS | `macos-latest` | 346 passed | `Subtitle Converter.app` (45.4 MB) | yes, alive after 12s |
+| Linux | `ubuntu-latest` | 346 passed | `sub_converter` bundle | yes, alive for 15s |
 
-Last verified on commit `4d2c44a`, CI run 34693848998, all three jobs green. The Linux
+Last verified on commit `480c053`, CI run 34697190030, all three jobs green. The Linux
 job launches under `Xvfb` with `LIBGL_ALWAYS_SOFTWARE=1`, since a headless runner has
 neither a display nor a GPU.
 
@@ -231,6 +234,8 @@ lib/
     app_controller.dart         All UI state; delegates to FileService.
     home_screen.dart            The single window, drop target and shortcuts.
   widgets/                      Header, file list, options panel, status bar.
+  i18n/                         AppStrings tables (en, zh), AppLanguage and the
+                                StringsScope that hands them to the widgets.
   utils/                        Timestamp, inline markup, defaults.
 test/
   core/ formats/ services/ widget/ integration/
