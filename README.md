@@ -119,14 +119,14 @@ valid UTF-8. Detection failures are reported per file rather than guessed throug
 flutter test
 ```
 
-The suite currently contains **324 tests, all passing**. Coverage:
+The suite currently contains **330 tests, all passing**. Coverage:
 
 - **Core**: timestamp parse/format rules, the unified model (`SubtitleDocument`/`SubtitleCue`), and the shared inline-markup scanner.
 - **Formats**: dedicated parser/writer tests for each of SRT, VTT, LRC, ASS, SSA and SBV, exercised against real fixtures (including CJK and tag-heavy files).
 - **Conversion matrix**: a generated 6x6 test that converts every fixture to every format, re-parses the output with the target's own parser and checks cue count and start-time drift.
 - **Encoding**: BOM handling, UTF-16/UTF-32 detection, ASCII/CJK/SJIS/GBK/GB18030 cases, Windows-1252 fallback and failure behavior.
 - **Path and file safety**: conflict policies and the "never overwrite the source" rule; batch conversion, progress and per-file failures.
-- **UI/controller**: `AppController` state and persistence, and widget tests for the home screen.
+- **UI/controller**: `AppController` state and persistence, widget tests for the home screen, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, dropped folders and empty paths ignored, duplicates collapsed).
 - **End to end**: the real `FileService` and `AppController` against real files on disk, including the full all-format matrix.
 
 ## Scope
