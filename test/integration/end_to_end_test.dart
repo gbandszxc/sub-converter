@@ -76,8 +76,7 @@ void main() {
   test('add, inspect and convert a batch through the real services', () async {
     final File srt = copyFixture('srt', 'basic.srt');
     final File ass = copyFixture('ass', 'basic.ass');
-    final AppController controller =
-        controllerFor(target: SubtitleFormat.vtt);
+    final AppController controller = controllerFor(target: SubtitleFormat.vtt);
 
     await controller.addPaths(<String>[srt.path, ass.path]);
     await settleInspection(controller);
@@ -92,7 +91,8 @@ void main() {
 
     expect(controller.successCount, 2);
     expect(controller.failureCount, 0);
-    expect(controller.batchMessage, contains('2 succeeded'));
+    expect(controller.hasBatchSummary, isTrue);
+    expect(controller.batchFailure, isNull);
     expect(controller.isConverting, isFalse);
 
     for (final String name in <String>['basic.vtt']) {
@@ -101,10 +101,7 @@ void main() {
       expect(utf8.decode(output.readAsBytesSync()), startsWith('WEBVTT'));
     }
     // The ASS source produced a second VTT file under its own name.
-    expect(
-      File(p.join(workspace.path, 'basic.vtt')).existsSync(),
-      isTrue,
-    );
+    expect(File(p.join(workspace.path, 'basic.vtt')).existsSync(), isTrue);
     // Sources are untouched.
     expect(
       srt.readAsBytesSync(),
@@ -184,8 +181,7 @@ void main() {
     expect(controller.successCount, 1);
     expect(controller.failureCount, 2);
     expect(controller.completedCount, 3);
-    expect(controller.batchMessage, contains('1 succeeded'));
-    expect(controller.batchMessage, contains('2 failed'));
+    expect(controller.hasBatchSummary, isTrue);
 
     for (final SubtitleFileEntry entry in controller.entries.skip(1)) {
       expect(entry.result!.isFailure, isTrue);
@@ -194,10 +190,7 @@ void main() {
       expect(entry.result!.detail, isNot(contains('#0')));
       expect(entry.result!.detail, isNot(contains('Exception:')));
     }
-    expect(
-      File(p.join(workspace.path, 'basic.lrc')).existsSync(),
-      isTrue,
-    );
+    expect(File(p.join(workspace.path, 'basic.lrc')).existsSync(), isTrue);
   });
 
   test('converts into a custom folder with a time offset', () async {
@@ -259,7 +252,10 @@ void main() {
       controller.entries.single.result!.failure,
       ConversionFailure.targetPathUnavailable,
     );
-    expect(controller.entries.single.result!.detail, contains('does-not-exist'));
+    expect(
+      controller.entries.single.result!.detail,
+      contains('does-not-exist'),
+    );
   });
 
   test('an empty custom folder choice disables conversion', () async {
@@ -282,11 +278,11 @@ void main() {
     await controller.convertAll();
 
     expect(existing.readAsStringSync(), 'keep me');
+    expect(File(p.join(workspace.path, 'basic (1).vtt')).existsSync(), isTrue);
     expect(
-      File(p.join(workspace.path, 'basic (1).vtt')).existsSync(),
-      isTrue,
+      controller.entries.single.result!.outputPath,
+      endsWith('basic (1).vtt'),
     );
-    expect(controller.entries.single.result!.outputPath, endsWith('basic (1).vtt'));
   });
 
   test('settings survive a controller restart', () async {
@@ -319,7 +315,8 @@ void main() {
   test('a 100 file batch converts without losing any file', () async {
     // Goal scale: 1-100 files in one run. Every file is independent, progress
     // is reported per file, and nothing may be dropped along the way.
-    final Directory out = Directory(p.join(workspace.path, 'bulk'))..createSync();
+    final Directory out = Directory(p.join(workspace.path, 'bulk'))
+      ..createSync();
     final List<String> sources = <String>[];
     for (int index = 0; index < 100; index++) {
       final File file = File(
@@ -358,8 +355,8 @@ void main() {
   });
 
   test('awkward file names still convert correctly', () async {
-    final String content =
-        File(p.join('test', 'fixtures', 'srt', 'basic.srt')).readAsStringSync();
+    final String content = File(p.join('test', 'fixtures', 'srt', 'basic.srt'))
+        .readAsStringSync();
     final AppController controller = controllerFor(target: SubtitleFormat.vtt);
 
     // Uppercase extension, spaces, non-ASCII characters, and multiple dots.
@@ -415,10 +412,7 @@ void main() {
 
     await controller.convertAll();
     expect(controller.successCount, 1);
-    expect(
-      File(p.join(workspace.path, 'subtitles.vtt')).existsSync(),
-      isTrue,
-    );
+    expect(File(p.join(workspace.path, 'subtitles.vtt')).existsSync(), isTrue);
   });
 
   test('a file with no usable content or extension is unsupported', () async {
@@ -469,12 +463,12 @@ void main() {
         expect(
           controller.successCount,
           1,
-          reason: '${entry.key.label} -> ${target.label} failed: '
+          reason:
+              '${entry.key.label} -> ${target.label} failed: '
               '${controller.entries.single.result?.failure?.title} '
               '${controller.entries.single.result?.detail}',
         );
-        final String? outputPath =
-            controller.entries.single.result?.outputPath;
+        final String? outputPath = controller.entries.single.result?.outputPath;
         expect(outputPath, isNotNull);
         expect(File(outputPath!).lengthSync(), greaterThan(0));
       }

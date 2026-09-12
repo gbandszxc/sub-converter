@@ -1,5 +1,6 @@
 import '../formats/format_registry.dart';
 import '../models/format_descriptor.dart';
+import '../models/loss_report.dart';
 import '../models/subtitle_document.dart';
 import '../models/subtitle_exception.dart';
 import '../models/subtitle_format.dart';
@@ -33,7 +34,8 @@ class ConversionOutput {
   bool get isLossy => loss.isLossy;
 
   @override
-  String toString() => 'ConversionOutput(${sourceFormat.label} -> '
+  String toString() =>
+      'ConversionOutput(${sourceFormat.label} -> '
       '${targetFormat.label}, $cueCount cues)';
 }
 
@@ -62,10 +64,12 @@ class SubtitleConverter {
     required SubtitleFormat targetFormat,
     Duration timeOffset = Duration.zero,
   }) {
-    final FormatDescriptor? sourceDescriptor =
-        registry.descriptorFor(sourceFormat);
-    final FormatDescriptor? targetDescriptor =
-        registry.descriptorFor(targetFormat);
+    final FormatDescriptor? sourceDescriptor = registry.descriptorFor(
+      sourceFormat,
+    );
+    final FormatDescriptor? targetDescriptor = registry.descriptorFor(
+      targetFormat,
+    );
     if (sourceDescriptor == null || targetDescriptor == null) {
       throw UnsupportedFormatException(
         'Conversion from ${sourceFormat.label} to ${targetFormat.label} '
@@ -73,7 +77,9 @@ class SubtitleConverter {
       );
     }
 
-    final SubtitleDocument document = registry.parserFor(sourceFormat).parse(content);
+    final SubtitleDocument document = registry
+        .parserFor(sourceFormat)
+        .parse(content);
     document.sourceFormat = sourceFormat;
 
     if (document.isEmpty) {

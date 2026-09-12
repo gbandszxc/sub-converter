@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/app_language.dart';
+import '../i18n/app_strings.dart';
 import '../models/conversion_job.dart';
 import '../models/subtitle_format.dart';
 import '../screens/app_controller.dart';
@@ -22,40 +24,43 @@ class OptionsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _targetFormat(context),
+          _targetFormat(context, strings),
           const SizedBox(height: AppSpacing.lg),
-          _outputLocation(context),
+          _outputLocation(context, strings),
           const SizedBox(height: AppSpacing.lg),
-          _conflictPolicy(context),
+          _conflictPolicy(context, strings),
           const SizedBox(height: AppSpacing.lg),
           TimeOffsetField(controller: controller),
           const SizedBox(height: AppSpacing.md),
-          _bomCheckbox(context),
+          _bomCheckbox(context, strings),
           const SizedBox(height: AppSpacing.lg),
-          _convertButton(context),
+          _language(context, strings),
+          const SizedBox(height: AppSpacing.lg),
+          _convertButton(context, strings),
         ],
       ),
     );
   }
 
-  Widget _sectionText(BuildContext context, String text) =>
+  Widget _sectionText(String text) =>
       Text(text, style: AppTextStyles.sectionTitle);
 
-  Widget _targetFormat(BuildContext context) {
+  Widget _targetFormat(BuildContext context, AppStrings strings) {
     return LabelledDropdown<SubtitleFormat>(
-      label: 'Target format',
+      label: strings.targetFormat,
       value: controller.options.targetFormat,
       items: SubtitleFormat.values
           .map(
             (SubtitleFormat format) => DropdownMenuItem<SubtitleFormat>(
               value: format,
               child: Text(
-                '${format.label} · ${format.description}',
+                '${format.label} · ${strings.formatDescription(format)}',
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.body,
               ),
@@ -70,16 +75,15 @@ class OptionsPanel extends StatelessWidget {
     );
   }
 
-  Widget _outputLocation(BuildContext context) {
+  Widget _outputLocation(BuildContext context, AppStrings strings) {
     final ConversionOptions options = controller.options;
     final bool isCustom =
         options.outputLocation == OutputLocation.customDirectory;
-    final String? validationError = options.validationError();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        _sectionText(context, 'Output'),
+        _sectionText(strings.output),
         RadioGroup<OutputLocation>(
           groupValue: options.outputLocation,
           onChanged: (OutputLocation? location) {
@@ -95,7 +99,10 @@ class OptionsPanel extends StatelessWidget {
                     dense: true,
                     visualDensity: VisualDensity.compact,
                     contentPadding: EdgeInsets.zero,
-                    title: Text(location.label, style: AppTextStyles.body),
+                    title: Text(
+                      _outputLocationLabel(strings, location),
+                      style: AppTextStyles.body,
+                    ),
                   ),
                 )
                 .toList(),
@@ -106,12 +113,12 @@ class OptionsPanel extends StatelessWidget {
             children: <Widget>[
               OutlinedButton(
                 onPressed: onChooseDirectory,
-                child: const Text('Choose...'),
+                child: Text(strings.choose),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  options.outputDirectory ?? 'No folder chosen',
+                  options.outputDirectory ?? strings.noFolderChosen,
                   style: AppTextStyles.caption.copyWith(
                     color: mutedColor(context),
                   ),
@@ -121,11 +128,11 @@ class OptionsPanel extends StatelessWidget {
               ),
             ],
           ),
-          if (validationError != null)
+          if (options.isOutputDirectoryMissing)
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.xs),
               child: Text(
-                validationError,
+                strings.chooseFolderError,
                 style: AppTextStyles.caption.copyWith(
                   color: Theme.of(context).colorScheme.error,
                 ),
@@ -136,17 +143,32 @@ class OptionsPanel extends StatelessWidget {
     );
   }
 
-  Widget _conflictPolicy(BuildContext context) {
+  String _outputLocationLabel(AppStrings strings, OutputLocation location) {
+    switch (location) {
+      case OutputLocation.sourceDirectory:
+        return strings.outputSourceFolder;
+      case OutputLocation.customDirectory:
+        return strings.outputCustomFolder;
+    }
+  }
+
+  Widget _conflictPolicy(BuildContext context, AppStrings strings) {
     return LabelledDropdown<OutputConflictPolicy>(
-      label: 'Conflict',
+      label: strings.conflict,
       value: controller.options.conflictPolicy,
-      helperText: _conflictExplanation(controller.options.conflictPolicy),
+      helperText: _conflictExplanation(
+        strings,
+        controller.options.conflictPolicy,
+      ),
       items: OutputConflictPolicy.values
           .map(
             (OutputConflictPolicy policy) =>
                 DropdownMenuItem<OutputConflictPolicy>(
                   value: policy,
-                  child: Text(policy.label, style: AppTextStyles.body),
+                  child: Text(
+                    _conflictLabel(strings, policy),
+                    style: AppTextStyles.body,
+                  ),
                 ),
           )
           .toList(),
@@ -158,18 +180,29 @@ class OptionsPanel extends StatelessWidget {
     );
   }
 
-  String _conflictExplanation(OutputConflictPolicy policy) {
+  String _conflictLabel(AppStrings strings, OutputConflictPolicy policy) {
     switch (policy) {
       case OutputConflictPolicy.autoRename:
-        return 'Write a numbered file instead of replacing an existing one.';
+        return strings.conflictAutoRename;
       case OutputConflictPolicy.overwrite:
-        return 'Replace an existing output file.';
+        return strings.conflictOverwrite;
       case OutputConflictPolicy.skip:
-        return 'Leave an existing output file and skip the entry.';
+        return strings.conflictSkip;
     }
   }
 
-  Widget _bomCheckbox(BuildContext context) {
+  String _conflictExplanation(AppStrings strings, OutputConflictPolicy policy) {
+    switch (policy) {
+      case OutputConflictPolicy.autoRename:
+        return strings.conflictAutoRenameHelp;
+      case OutputConflictPolicy.overwrite:
+        return strings.conflictOverwriteHelp;
+      case OutputConflictPolicy.skip:
+        return strings.conflictSkipHelp;
+    }
+  }
+
+  Widget _bomCheckbox(BuildContext context, AppStrings strings) {
     return CheckboxListTile(
       value: controller.options.writeUtf8Bom,
       onChanged: (bool? value) => controller.setWriteUtf8Bom(value ?? false),
@@ -177,15 +210,49 @@ class OptionsPanel extends StatelessWidget {
       visualDensity: VisualDensity.compact,
       contentPadding: EdgeInsets.zero,
       controlAffinity: ListTileControlAffinity.leading,
-      title: Text('Write UTF-8 BOM', style: AppTextStyles.body),
+      title: Text(strings.writeBom, style: AppTextStyles.body),
     );
   }
 
-  Widget _convertButton(BuildContext context) {
+  Widget _language(BuildContext context, AppStrings strings) {
+    return LabelledDropdown<AppLanguage>(
+      label: strings.language,
+      value: controller.language,
+      items: AppLanguage.values
+          .map(
+            (AppLanguage language) => DropdownMenuItem<AppLanguage>(
+              value: language,
+              child: Text(
+                _languageLabel(strings, language),
+                style: AppTextStyles.body,
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: (AppLanguage? language) {
+        if (language != null) {
+          controller.setLanguage(language);
+        }
+      },
+    );
+  }
+
+  String _languageLabel(AppStrings strings, AppLanguage language) {
+    switch (language) {
+      case AppLanguage.system:
+        return strings.languageSystem;
+      case AppLanguage.english:
+        return strings.languageEnglish;
+      case AppLanguage.chinese:
+        return strings.languageChinese;
+    }
+  }
+
+  Widget _convertButton(BuildContext context, AppStrings strings) {
     final int count = controller.fileCount;
     final String label = count == 0
-        ? 'Convert'
-        : 'Convert $count ${count == 1 ? 'file' : 'files'}';
+        ? strings.convert
+        : strings.convertWithCount(count);
     return SizedBox(
       width: double.infinity,
       child: FilledButton.icon(

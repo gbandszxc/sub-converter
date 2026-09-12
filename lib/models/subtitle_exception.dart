@@ -1,7 +1,12 @@
 /// Why a file could not be converted.
 ///
-/// The UI shows [ConversionFailure.message]; detailed causes stay in
-/// [SubtitleConversionException.cause] for debug logs only.
+/// The enum is the machine-readable reason. Its [title] and [message] are the
+/// developer-facing diagnostic (used by tests and for logging); the UI must
+/// show the localized title from `AppStrings.failureTitle` instead, and only
+/// surface a technical detail when it carries a path the user needs.
+///
+/// Detailed causes stay in [SubtitleConversionException.cause] for debug logs
+/// only.
 enum ConversionFailure {
   unsupportedFormat(
     'Unsupported format',
@@ -31,10 +36,7 @@ enum ConversionFailure {
     'Target path unavailable',
     'The output directory does not exist or is not reachable.',
   ),
-  readFailed(
-    'Cannot read input file',
-    'The source file could not be read.',
-  ),
+  readFailed('Cannot read input file', 'The source file could not be read.'),
   unknown('Conversion failed', 'The file could not be converted.');
 
   const ConversionFailure(this.title, this.message);
@@ -51,11 +53,7 @@ enum ConversionFailure {
 /// Carries a [ConversionFailure] so the UI can show a clear reason without
 /// ever printing a Dart stack trace at the user.
 class SubtitleConversionException implements Exception {
-  SubtitleConversionException(
-    this.failure,
-    this.message, {
-    this.cause,
-  });
+  SubtitleConversionException(this.failure, this.message, {this.cause});
 
   final ConversionFailure failure;
 
@@ -75,15 +73,15 @@ class SubtitleConversionException implements Exception {
 /// Raised by parsers when content does not match the format's grammar.
 class SubtitleSyntaxException extends SubtitleConversionException {
   SubtitleSyntaxException(String message, {super.cause})
-      : super(ConversionFailure.invalidSubtitleSyntax, message);
+    : super(ConversionFailure.invalidSubtitleSyntax, message);
 }
 
 /// Raised when no format matches the file's content or extension.
 class UnsupportedFormatException extends SubtitleConversionException {
   UnsupportedFormatException([String? message])
-      : super(
-          ConversionFailure.unsupportedFormat,
-          message ??
-              'The file format could not be identified or is not supported.',
-        );
+    : super(
+        ConversionFailure.unsupportedFormat,
+        message ??
+            'The file format could not be identified or is not supported.',
+      );
 }

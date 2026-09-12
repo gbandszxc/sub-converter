@@ -1,3 +1,4 @@
+import 'loss_report.dart';
 import 'subtitle_exception.dart';
 import 'subtitle_format.dart';
 
@@ -5,32 +6,29 @@ import 'subtitle_format.dart';
 ///
 /// [autoRename] is the default and the only policy that can never destroy
 /// data.
+///
+/// The enum is display-free: the UI maps each value to a localized label from
+/// `AppStrings`.
 enum OutputConflictPolicy {
   /// Write `E01 (1).srt` instead of overwriting `E01.srt`.
-  autoRename('Auto rename'),
+  autoRename,
 
   /// Replace the existing file. Never applied to the source file itself.
-  overwrite('Overwrite'),
+  overwrite,
 
   /// Leave the existing file alone and report the entry as skipped.
-  skip('Skip');
-
-  const OutputConflictPolicy(this.label);
-
-  final String label;
+  skip,
 }
 
 /// Where converted files are written.
+///
+/// Display-free; the UI localizes the labels.
 enum OutputLocation {
   /// Next to each source file (the default).
-  sourceDirectory('Source file folder'),
+  sourceDirectory,
 
   /// All files into one user-chosen directory.
-  customDirectory('Custom folder');
-
-  const OutputLocation(this.label);
-
-  final String label;
+  customDirectory,
 }
 
 /// Everything that controls a batch conversion run.
@@ -61,13 +59,23 @@ class ConversionOptions {
   /// Whether output starts with a UTF-8 BOM. Output is always UTF-8.
   final bool writeUtf8Bom;
 
-  /// User-facing problem with this configuration, or `null` when it is usable.
+  /// True when [outputLocation] is [OutputLocation.customDirectory] but no
+  /// usable folder was chosen. The UI maps this to a localized message
+  /// (`AppStrings.chooseFolderError`); no display text lives in the model.
+  bool get isOutputDirectoryMissing {
+    if (outputLocation != OutputLocation.customDirectory) {
+      return false;
+    }
+    final String? directory = outputDirectory?.trim();
+    return directory == null || directory.isEmpty;
+  }
+
+  /// Developer-facing description of a configuration problem, or `null` when
+  /// the options are usable. The UI must render [isOutputDirectoryMissing]
+  /// through `AppStrings.chooseFolderError` rather than show this text.
   String? validationError() {
-    if (outputLocation == OutputLocation.customDirectory) {
-      final String? directory = outputDirectory?.trim();
-      if (directory == null || directory.isEmpty) {
-        return 'Choose an output folder.';
-      }
+    if (isOutputDirectoryMissing) {
+      return 'Choose an output folder.';
     }
     return null;
   }
@@ -93,22 +101,21 @@ class ConversionOptions {
   }
 
   @override
-  String toString() => 'ConversionOptions(target: ${targetFormat.label}, '
+  String toString() =>
+      'ConversionOptions(target: ${targetFormat.label}, '
       'location: ${outputLocation.name}, offset: $timeOffset, '
       'conflict: ${conflictPolicy.name})';
 }
 
 /// Outcome of processing one file.
+///
+/// Display-free; the UI localizes the status text.
 enum ConversionStatus {
-  pending('Pending'),
-  converting('Converting'),
-  succeeded('Succeeded'),
-  failed('Failed'),
-  skipped('Skipped');
-
-  const ConversionStatus(this.label);
-
-  final String label;
+  pending,
+  converting,
+  succeeded,
+  failed,
+  skipped;
 
   /// True while the entry has not reached a final state.
   bool get isInProgress =>
@@ -126,7 +133,7 @@ class ConversionResult {
     this.failure,
     this.detail,
     this.detectedEncoding,
-    this.warnings = const <String>[],
+    this.warnings = const <LossWarning>[],
     this.outputRenamed = false,
     this.cueCount = 0,
     this.elapsed = Duration.zero,
@@ -134,17 +141,17 @@ class ConversionResult {
 
   /// An entry that has been added to the list but not converted yet.
   const ConversionResult.pending(this.sourcePath)
-      : status = ConversionStatus.pending,
-        sourceFormat = null,
-        targetFormat = null,
-        outputPath = null,
-        failure = null,
-        detail = null,
-        detectedEncoding = null,
-        warnings = const <String>[],
-        outputRenamed = false,
-        cueCount = 0,
-        elapsed = Duration.zero;
+    : status = ConversionStatus.pending,
+      sourceFormat = null,
+      targetFormat = null,
+      outputPath = null,
+      failure = null,
+      detail = null,
+      detectedEncoding = null,
+      warnings = const <LossWarning>[],
+      outputRenamed = false,
+      cueCount = 0,
+      elapsed = Duration.zero;
 
   final String sourcePath;
   final ConversionStatus status;
@@ -164,8 +171,8 @@ class ConversionResult {
 
   /// Non-fatal information loss, e.g. dropped styling. Only ever populated
   /// with loss notes, so [isLossy] means what it says; file-level facts such as
-  /// a rename are reported separately.
-  final List<String> warnings;
+  /// a rename are reported separately. The UI localizes each warning.
+  final List<LossWarning> warnings;
 
   /// True when the output had to be given a numbered name because the plain
   /// name was taken (or was the source file itself).
@@ -181,22 +188,6 @@ class ConversionResult {
   /// True when the conversion succeeded but lost some source information.
   bool get isLossy => isSuccess && warnings.isNotEmpty;
 
-  /// One-line summary for the UI.
-  String get summary {
-    switch (status) {
-      case ConversionStatus.pending:
-        return 'Ready';
-      case ConversionStatus.converting:
-        return 'Converting...';
-      case ConversionStatus.succeeded:
-        return 'Converted to ${targetFormat?.label ?? '?'}';
-      case ConversionStatus.skipped:
-        return 'Skipped: output file already exists';
-      case ConversionStatus.failed:
-        return failure?.title ?? 'Conversion failed';
-    }
-  }
-
   ConversionResult copyWith({
     ConversionStatus? status,
     SubtitleFormat? sourceFormat,
@@ -205,7 +196,7 @@ class ConversionResult {
     ConversionFailure? failure,
     String? detail,
     String? detectedEncoding,
-    List<String>? warnings,
+    List<LossWarning>? warnings,
     bool? outputRenamed,
     int? cueCount,
     Duration? elapsed,

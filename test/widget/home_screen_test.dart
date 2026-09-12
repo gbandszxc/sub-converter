@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_converter/i18n/strings_en.dart';
 import 'package:sub_converter/models/conversion_job.dart';
+import 'package:sub_converter/models/loss_report.dart';
 import 'package:sub_converter/screens/app_controller.dart';
-import 'package:sub_converter/widgets/ui_constants.dart';
 
 import 'fakes.dart';
 
@@ -101,7 +102,13 @@ void main() {
     final AppController controller = testController(
       fileService: FakeFileService(
         convertBuilder: (String path, ConversionOptions options) =>
-            successResult(path, options, warnings: <String>['Bold dropped.']),
+            successResult(
+              path,
+              options,
+              warnings: const <LossWarning>[
+                LossWarning(LossKind.inlineStylesDropped),
+              ],
+            ),
       ),
     );
     addTearDown(controller.dispose);
@@ -113,7 +120,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text(lossyNotice), findsOneWidget);
+    expect(find.text(const AppStringsEn().lossyNotice), findsOneWidget);
     expect(find.text('1 succeeded. 1 lost some styling.'), findsOneWidget);
     expect(controller.successCount, 1);
     expect(controller.lossyCount, 1);
@@ -141,7 +148,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text(lossyNotice), findsNothing);
+    expect(find.text(const AppStringsEn().lossyNotice), findsNothing);
     expect(find.text('1 succeeded.'), findsOneWidget);
     expect(controller.successCount, 1);
     expect(controller.lossyCount, 0);

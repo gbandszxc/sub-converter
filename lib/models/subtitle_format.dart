@@ -2,24 +2,25 @@
 ///
 /// Adding a format means adding a value here, a [FormatDescriptor], and a
 /// parser/writer pair. Nothing else in the core needs to change.
+///
+/// The enum carries only language-neutral data. The longer, user-facing
+/// description is localized by the UI through `AppStrings.formatDescription`,
+/// so no English display text lives here.
 enum SubtitleFormat {
-  srt('SRT', 'srt', 'SubRip'),
-  vtt('VTT', 'vtt', 'WebVTT'),
-  lrc('LRC', 'lrc', 'Lyric / LRC'),
-  ass('ASS', 'ass', 'Advanced SubStation Alpha'),
-  ssa('SSA', 'ssa', 'SubStation Alpha'),
-  sbv('SBV', 'sbv', 'YouTube SBV');
+  srt('SRT', 'srt'),
+  vtt('VTT', 'vtt'),
+  lrc('LRC', 'lrc'),
+  ass('ASS', 'ass'),
+  ssa('SSA', 'ssa'),
+  sbv('SBV', 'sbv');
 
-  const SubtitleFormat(this.label, this.extension, this.description);
+  const SubtitleFormat(this.label, this.extension);
 
-  /// Short, user-facing name, e.g. `SRT`.
+  /// Short, user-facing name, e.g. `SRT`. Language-neutral.
   final String label;
 
   /// Canonical file extension without a leading dot.
   final String extension;
-
-  /// Longer, user-facing name.
-  final String description;
 
   /// Resolves a format from a file extension or a bare file name.
   ///

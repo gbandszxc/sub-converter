@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:sub_converter/i18n/app_language.dart';
+import 'package:sub_converter/i18n/app_strings.dart';
+import 'package:sub_converter/i18n/strings_scope.dart';
 import 'package:sub_converter/models/conversion_job.dart';
+import 'package:sub_converter/models/loss_report.dart';
 import 'package:sub_converter/models/subtitle_exception.dart';
 import 'package:sub_converter/models/subtitle_format.dart';
 import 'package:sub_converter/screens/app_controller.dart';
@@ -44,7 +48,7 @@ FileInspection inspectionFor(
 ConversionResult successResult(
   String path,
   ConversionOptions options, {
-  List<String> warnings = const <String>[],
+  List<LossWarning> warnings = const <LossWarning>[],
 }) {
   return ConversionResult(
     sourcePath: path,
@@ -122,12 +126,21 @@ class FakeFileService extends FileService {
 }
 
 /// Pumps [HomeScreen] wired to [controller] inside a minimal MaterialApp.
+///
+/// [language] selects the string table; it defaults to English so existing
+/// call sites keep working. Note this only fixes the table - a test that drives
+/// the in-app Language dropdown must build `SubtitleConverterApp` instead, so
+/// the scope rebuilds when the controller changes.
 Future<void> pumpHomeScreen(
   WidgetTester tester,
-  AppController controller,
-) async {
+  AppController controller, {
+  AppLanguage language = AppLanguage.english,
+}) async {
   await tester.pumpWidget(
-    MaterialApp(home: HomeScreen(controller: controller)),
+    StringsScope(
+      strings: AppStrings.forLanguage(language),
+      child: MaterialApp(home: HomeScreen(controller: controller)),
+    ),
   );
   await tester.pumpAndSettle();
 }

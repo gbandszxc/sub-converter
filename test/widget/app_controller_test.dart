@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sub_converter/models/conversion_job.dart';
+import 'package:sub_converter/models/loss_report.dart';
 import 'package:sub_converter/models/subtitle_exception.dart';
 import 'package:sub_converter/models/subtitle_format.dart';
 import 'package:sub_converter/screens/app_controller.dart';
@@ -76,7 +77,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       final SubtitleFileEntry entry = controller.entries.single;
-      expect(entry.inspectionError, 'The file does not exist.');
+      expect(entry.inspectionError, ConversionFailure.readFailed);
       expect(entry.detectedFormat, isNull);
       expect(controller.canConvert, isTrue);
     });
@@ -172,7 +173,8 @@ void main() {
       expect(controller.successCount, 2);
       expect(controller.failureCount, 0);
       expect(controller.lossyCount, 0);
-      expect(controller.batchMessage, '2 succeeded.');
+      expect(controller.hasBatchSummary, isTrue);
+      expect(controller.batchFailure, isNull);
       expect(
         controller.entries.every((SubtitleFileEntry e) => e.result!.isSuccess),
         isTrue,
@@ -194,13 +196,20 @@ void main() {
 
       expect(controller.successCount, 2);
       expect(controller.failureCount, 1);
-      expect(controller.batchMessage, '2 succeeded, 1 failed.');
+      expect(controller.hasBatchSummary, isTrue);
+      expect(controller.batchFailure, isNull);
     });
 
     test('lossy success counts as success and lossy', () async {
       final FakeFileService service = FakeFileService(
         convertBuilder: (String path, ConversionOptions options) =>
-            successResult(path, options, warnings: <String>['Bold dropped.']),
+            successResult(
+              path,
+              options,
+              warnings: const <LossWarning>[
+                LossWarning(LossKind.inlineStylesDropped),
+              ],
+            ),
       );
       final AppController controller = testController(fileService: service);
       addTearDown(controller.dispose);

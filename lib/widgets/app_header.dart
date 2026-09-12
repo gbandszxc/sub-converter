@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/app_strings.dart';
 import '../screens/app_controller.dart';
 import 'ui_constants.dart';
 
@@ -16,6 +17,7 @@ class AppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final bool busy = controller.isConverting;
     return SizedBox(
       height: AppSpacing.headerHeight,
@@ -29,18 +31,18 @@ class AppHeader extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: AppSpacing.sm),
-            const Text('Subtitle Converter', style: AppTextStyles.appTitle),
+            Text(strings.appTitle, style: AppTextStyles.appTitle),
             const Spacer(),
             OutlinedButton.icon(
               onPressed: onAddFiles,
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add files'),
+              label: Text(strings.addFiles),
             ),
             const SizedBox(width: AppSpacing.sm),
             TextButton.icon(
               onPressed: busy ? null : controller.clearEntries,
               icon: const Icon(Icons.clear_all, size: 16),
-              label: const Text('Clear'),
+              label: Text(strings.clear),
             ),
           ],
         ),

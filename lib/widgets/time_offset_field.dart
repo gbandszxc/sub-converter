@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../i18n/app_strings.dart';
 import '../screens/app_controller.dart';
 import '../utils/subtitle_defaults.dart';
 import 'ui_constants.dart';
@@ -66,8 +67,8 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
     if (_focusNode.hasFocus) {
       return;
     }
-    final String value =
-        widget.controller.options.timeOffset.inMilliseconds.toString();
+    final String value = widget.controller.options.timeOffset.inMilliseconds
+        .toString();
     if (_text.text != value) {
       _text.text = value;
       _text.selection = TextSelection.collapsed(offset: value.length);
@@ -83,10 +84,11 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text('Time offset', style: AppTextStyles.sectionTitle),
+        Text(strings.timeOffset, style: AppTextStyles.sectionTitle),
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
@@ -130,7 +132,7 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
               child: Text('+$_step ms'),
             ),
             IconButton(
-              tooltip: 'Reset offset',
+              tooltip: strings.resetOffset,
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
@@ -141,7 +143,7 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Negative values move cues earlier; timestamps are clamped at zero.',
+          strings.timeOffsetHint,
           style: AppTextStyles.caption.copyWith(color: mutedColor(context)),
         ),
       ],

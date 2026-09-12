@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/app_strings.dart';
 import '../screens/app_controller.dart';
 import 'ui_constants.dart';
 
@@ -11,6 +12,7 @@ class StatusBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Container(
       height: AppSpacing.statusBarHeight,
@@ -32,17 +34,47 @@ class StatusBar extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.md),
           ],
-          if (controller.batchMessage != null)
-            Flexible(
-              child: Text(
-                controller.batchMessage!,
-                style: AppTextStyles.caption,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+          Flexible(
+            child: _Summary(controller: controller, strings: strings),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// The batch outcome, composed here from structured state so the controller
+/// stays free of display text.
+class _Summary extends StatelessWidget {
+  const _Summary({required this.controller, required this.strings});
+
+  final AppController controller;
+  final AppStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? message;
+    if (controller.batchFailure != null) {
+      message = strings.failureTitle(controller.batchFailure!);
+    } else if (controller.hasBatchSummary) {
+      final String summary = strings.batchSummary(
+        succeeded: controller.successCount,
+        failed: controller.failureCount,
+        skipped: controller.skippedCount,
+        lossy: controller.lossyCount,
+      );
+      message = summary.isEmpty ? null : summary;
+    } else {
+      message = null;
+    }
+    if (message == null) {
+      return const SizedBox.shrink();
+    }
+    return Text(
+      message,
+      style: AppTextStyles.caption,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -54,19 +86,17 @@ class _Counts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final int files = controller.fileCount;
     if (files == 0) {
       return Text(
-        'No files',
+        strings.noFiles,
         style: AppTextStyles.caption.copyWith(color: mutedColor(context)),
       );
     }
     return Row(
       children: <Widget>[
-        Text(
-          '$files ${files == 1 ? 'file' : 'files'}',
-          style: AppTextStyles.caption,
-        ),
+        Text(strings.fileCount(files), style: AppTextStyles.caption),
         const SizedBox(width: AppSpacing.lg),
         _stat(
           context,

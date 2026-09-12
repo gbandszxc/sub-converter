@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 
+import '../i18n/app_strings.dart';
 import '../models/conversion_job.dart';
+import '../models/loss_report.dart';
+import '../models/subtitle_exception.dart';
 import '../screens/app_controller.dart';
 import 'format_chip.dart';
 import 'ui_constants.dart';
@@ -15,6 +18,7 @@ class FileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
@@ -25,11 +29,11 @@ class FileRow extends StatelessWidget {
         children: <Widget>[
           SizedBox(width: 20, height: 20, child: _statusIcon(context)),
           const SizedBox(width: AppSpacing.md),
-          Expanded(child: _details(context)),
+          Expanded(child: _details(context, strings)),
           IconButton(
             iconSize: 16,
             visualDensity: VisualDensity.compact,
-            tooltip: 'Remove',
+            tooltip: strings.remove,
             onPressed: controller.isConverting
                 ? null
                 : () => controller.removeEntry(entry),
@@ -40,7 +44,7 @@ class FileRow extends StatelessWidget {
     );
   }
 
-  Widget _details(BuildContext context) {
+  Widget _details(BuildContext context, AppStrings strings) {
     final List<Widget> lines = <Widget>[
       Row(
         children: <Widget>[
@@ -64,7 +68,7 @@ class FileRow extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       const SizedBox(height: 2),
-      ..._statusLines(context),
+      ..._statusLines(context, strings),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,18 +76,18 @@ class FileRow extends StatelessWidget {
     );
   }
 
-  List<Widget> _statusLines(BuildContext context) {
+  List<Widget> _statusLines(BuildContext context, AppStrings strings) {
     final ConversionResult? result = entry.result;
     final List<Widget> lines = <Widget>[
       Text(
-        _primaryStatus(result),
+        _primaryStatus(result, strings),
         style: AppTextStyles.caption.copyWith(color: mutedColor(context)),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
     ];
 
-    final String? secondary = _secondaryStatus(result);
+    final String? secondary = _secondaryStatus(result, strings);
     if (secondary != null) {
       lines.add(
         Text(
@@ -96,22 +100,36 @@ class FileRow extends StatelessWidget {
     }
 
     if (result?.isLossy ?? false) {
-      lines.add(_lossyNotice(context, result!.warnings));
+      lines.add(_lossyNotice(context, strings, result!));
     }
     return lines;
   }
 
-  Widget _lossyNotice(BuildContext context, List<String> warnings) {
+  Widget _lossyNotice(
+    BuildContext context,
+    AppStrings strings,
+    ConversionResult result,
+  ) {
     final Color color = Theme.of(context).colorScheme.tertiary;
+    final String target = result.targetFormat?.label ?? strings.unknown;
+    final String tooltip = result.warnings
+        .map(
+          (LossWarning warning) => strings.lossWarning(
+            warning.kind,
+            targetFormat: target,
+            count: warning.count,
+          ),
+        )
+        .join('\n');
     return Tooltip(
-      message: warnings.join('\n'),
+      message: tooltip,
       child: Row(
         children: <Widget>[
           Icon(Icons.warning_amber_outlined, size: 13, color: color),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
-              lossyNotice,
+              strings.lossyNotice,
               style: AppTextStyles.caption.copyWith(color: color),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -122,26 +140,44 @@ class FileRow extends StatelessWidget {
     );
   }
 
-  String _primaryStatus(ConversionResult? result) {
+  String _primaryStatus(ConversionResult? result, AppStrings strings) {
     switch (entry.status) {
       case ConversionStatus.pending:
-        return entry.isInspecting ? 'Inspecting...' : 'Ready';
+        return entry.isInspecting ? strings.inspecting : strings.ready;
       case ConversionStatus.converting:
-        return 'Converting...';
+        return strings.converting;
       case ConversionStatus.succeeded:
-        return 'Converted to ${result?.targetFormat?.label ?? '?'}';
+        return strings.convertedTo(
+          result?.targetFormat?.label ?? strings.unknown,
+        );
       case ConversionStatus.failed:
-        return result?.failure?.title ?? 'Conversion failed';
+        return strings.failureTitle(
+          result?.failure ?? ConversionFailure.unknown,
+        );
       case ConversionStatus.skipped:
-        return result?.detail ?? 'Skipped: output file already exists';
+        return strings.skippedExisting;
     }
   }
 
-  String? _secondaryStatus(ConversionResult? result) {
+  String? _secondaryStatus(ConversionResult? result, AppStrings strings) {
     if (result == null) {
       return null;
     }
     if (result.isFailure) {
+      // The localized title already explains most failures. Only these carry
+      // a path or file name the user needs to act on, and paths are
+      // language-neutral, so the English technical detail is shown for them
+      // and omitted for every other kind.
+      const Set<ConversionFailure> pathBearingFailures = <ConversionFailure>{
+        ConversionFailure.readFailed,
+        ConversionFailure.cannotWriteOutput,
+        ConversionFailure.permissionDenied,
+        ConversionFailure.targetPathUnavailable,
+      };
+      final ConversionFailure? failure = result.failure;
+      if (failure == null || !pathBearingFailures.contains(failure)) {
+        return null;
+      }
       final String? detail = result.detail;
       return detail == null || detail.isEmpty ? null : detail;
     }
@@ -149,7 +185,7 @@ class FileRow extends StatelessWidget {
       final String name = p.basename(result.outputPath!);
       // A rename is not information loss, so it is a quiet note here rather
       // than part of the lossy affordance.
-      return result.outputRenamed ? '$name  (renamed, name was taken)' : name;
+      return result.outputRenamed ? strings.renamedNote(name) : name;
     }
     return null;
   }

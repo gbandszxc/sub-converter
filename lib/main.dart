@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'i18n/app_language.dart';
+import 'i18n/app_strings.dart';
+import 'i18n/strings_scope.dart';
 import 'screens/app_controller.dart';
 import 'screens/home_screen.dart';
 
@@ -33,12 +37,38 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Subtitle Converter',
-      debugShowCheckedModeBanner: false,
-      theme: _themeFor(Brightness.light),
-      darkTheme: _themeFor(Brightness.dark),
-      home: HomeScreen(controller: _controller),
+    // Rebuilds whenever the controller changes, so picking a language updates
+    // every string immediately.
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (BuildContext context, Widget? child) {
+        // Use the binding's dispatcher rather than the raw
+        // `PlatformDispatcher.instance`: it is the same locale at runtime and
+        // it is what tests can override.
+        final Locale platformLocale =
+            WidgetsBinding.instance.platformDispatcher.locale;
+        final AppLanguage effective = _controller.language.resolve(
+          platformLocale,
+        );
+        return StringsScope(
+          strings: AppStrings.forLanguage(effective),
+          child: MaterialApp(
+            // The window title stays the product name in every language.
+            title: 'Subtitle Converter',
+            locale: effective.locale,
+            localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const <Locale>[Locale('en'), Locale('zh')],
+            debugShowCheckedModeBanner: false,
+            theme: _themeFor(Brightness.light),
+            darkTheme: _themeFor(Brightness.dark),
+            home: HomeScreen(controller: _controller),
+          ),
+        );
+      },
     );
   }
 

@@ -47,7 +47,3 @@ abstract final class AppTextStyles {
 /// Builds the muted foreground colour used for secondary lines.
 Color mutedColor(BuildContext context) =>
     Theme.of(context).colorScheme.onSurfaceVariant;
-
-/// The lossy conversion notice shown on a successful row.
-const String lossyNotice =
-    'Converted; some styling could not be represented in the target format.';

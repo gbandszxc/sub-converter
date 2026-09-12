@@ -3,6 +3,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../i18n/app_strings.dart';
 import '../models/subtitle_format.dart';
 import '../widgets/app_header.dart';
 import '../widgets/file_list_view.dart';
@@ -110,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _pickFiles() async {
     try {
       final List<XFile> files = await openFiles(
-        acceptedTypeGroups: _typeGroups,
+        acceptedTypeGroups: _typeGroups(AppStrings.of(context)),
       );
       if (files.isEmpty) {
         return;
@@ -136,13 +137,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _controller.convertAll();
   }
 
-  List<XTypeGroup> get _typeGroups => <XTypeGroup>[
+  List<XTypeGroup> _typeGroups(AppStrings strings) => <XTypeGroup>[
     XTypeGroup(
-      label: 'Subtitle files',
+      label: strings.filterSubtitleFiles,
       extensions: SubtitleFormat.values
           .map((SubtitleFormat format) => format.extension)
           .toList(),
     ),
-    const XTypeGroup(label: 'All files'),
+    XTypeGroup(label: strings.filterAllFiles),
   ];
 }

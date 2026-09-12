@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/app_strings.dart';
 import '../screens/app_controller.dart';
 import 'file_row.dart';
 import 'ui_constants.dart';
@@ -34,6 +35,7 @@ class _EmptyDropHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
@@ -46,12 +48,12 @@ class _EmptyDropHint extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Drag subtitle files here',
+            strings.emptyTitle,
             style: AppTextStyles.bodyStrong.copyWith(color: scheme.onSurface),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'or click Add files to choose them',
+            strings.emptySubtitle,
             style: AppTextStyles.caption.copyWith(
               color: scheme.onSurfaceVariant,
             ),

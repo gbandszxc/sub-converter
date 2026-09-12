@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
+import '../i18n/app_language.dart';
 import '../models/conversion_job.dart';
 import '../models/subtitle_exception.dart';
 import '../models/subtitle_format.dart';
@@ -22,7 +23,10 @@ class SubtitleFileEntry {
 
   FormatDetection? detection;
   ConversionResult? result;
-  String? inspectionError;
+
+  /// Structured inspection failure, localized by the UI. Never a sentence:
+  /// the controller holds no display text.
+  ConversionFailure? inspectionError;
   String? encodingName;
 
   SubtitleFormat? get detectedFormat => detection?.format;
@@ -60,6 +64,7 @@ class AppController extends ChangeNotifier {
   static const String _keyConflictPolicy = 'conflictPolicy';
   static const String _keyTimeOffsetMs = 'timeOffsetMs';
   static const String _keyWriteUtf8Bom = 'writeUtf8Bom';
+  static const String _keyLanguage = 'language';
 
   final FileService _fileService;
   final SettingsStore _settingsStore;
@@ -68,9 +73,13 @@ class AppController extends ChangeNotifier {
   final Set<String> _knownPaths = <String>{};
 
   ConversionOptions _options;
+  AppLanguage _language = AppLanguage.system;
   bool _isConverting = false;
   bool _disposed = false;
-  String? _batchMessage;
+
+  /// Structured outcome of the last batch, localized by the UI.
+  bool _hasBatchSummary = false;
+  ConversionFailure? _batchFailure;
 
   /// Rows in insertion order.
   List<SubtitleFileEntry> get entries =>
@@ -78,9 +87,19 @@ class AppController extends ChangeNotifier {
 
   ConversionOptions get options => _options;
 
+  /// UI language choice. An app setting, so it lives outside
+  /// [ConversionOptions]; the resolution against the platform locale happens
+  /// in `main.dart`.
+  AppLanguage get language => _language;
+
   bool get isConverting => _isConverting;
 
-  String? get batchMessage => _batchMessage;
+  /// True after a batch finished, so the UI can show its summary.
+  bool get hasBatchSummary => _hasBatchSummary;
+
+  /// A batch-level failure (a programming error escaping the service), or
+  /// `null`. The UI localizes it with `AppStrings.failureTitle`.
+  ConversionFailure? get batchFailure => _batchFailure;
 
   int get fileCount => _entries.length;
 
@@ -140,7 +159,7 @@ class AppController extends ChangeNotifier {
     if (added.isEmpty) {
       return;
     }
-    _batchMessage = null;
+    _resetBatchOutcome();
     notifyListeners();
     for (final SubtitleFileEntry entry in added) {
       unawaited(_inspect(entry));
@@ -165,7 +184,7 @@ class AppController extends ChangeNotifier {
     }
     _entries.clear();
     _knownPaths.clear();
-    _batchMessage = null;
+    _resetBatchOutcome();
     notifyListeners();
   }
 
@@ -181,7 +200,7 @@ class AppController extends ChangeNotifier {
         .map((SubtitleFileEntry e) => e.path)
         .toList();
     _isConverting = true;
-    _batchMessage = null;
+    _resetBatchOutcome();
     for (final SubtitleFileEntry entry in _entries) {
       entry.result = ConversionResult.pending(entry.path);
     }
@@ -190,15 +209,20 @@ class AppController extends ChangeNotifier {
 
     try {
       await _fileService.convertAll(paths, _options, onProgress: _onProgress);
-      _batchMessage = _buildBatchMessage();
+      _hasBatchSummary = true;
     } on SubtitleConversionException catch (error) {
-      _batchMessage = error.userMessage;
+      _batchFailure = error.failure;
     } catch (_) {
-      _batchMessage = 'The batch could not be completed.';
+      _batchFailure = ConversionFailure.unknown;
     } finally {
       _isConverting = false;
       notifyListeners();
     }
+  }
+
+  void _resetBatchOutcome() {
+    _hasBatchSummary = false;
+    _batchFailure = null;
   }
 
   void _onProgress(int completed, int total, ConversionResult result) {
@@ -215,22 +239,6 @@ class AppController extends ChangeNotifier {
   ConversionResult _convertingResult(String path) =>
       ConversionResult.pending(path)
           .copyWith(status: ConversionStatus.converting);
-
-  String _buildBatchMessage() {
-    final List<String> parts = <String>[
-      if (successCount > 0) '$successCount succeeded',
-      if (failureCount > 0) '$failureCount failed',
-      if (skippedCount > 0) '$skippedCount skipped',
-    ];
-    if (parts.isEmpty) {
-      return '';
-    }
-    final String message = '${parts.join(', ')}.';
-    if (lossyCount == 0) {
-      return message;
-    }
-    return '$message $lossyCount lost some styling.';
-  }
 
   // --- Options -------------------------------------------------------------
 
@@ -260,6 +268,17 @@ class AppController extends ChangeNotifier {
 
   void _updateOptions(ConversionOptions options) {
     _options = options;
+    notifyListeners();
+    unawaited(_persist());
+  }
+
+  /// Changes the UI language and persists it. The rebuild in `main.dart` picks
+  /// the new table up immediately.
+  void setLanguage(AppLanguage value) {
+    if (_language == value) {
+      return;
+    }
+    _language = value;
     notifyListeners();
     unawaited(_persist());
   }
@@ -299,6 +318,7 @@ class AppController extends ChangeNotifier {
           ? values[_keyWriteUtf8Bom]! as bool
           : _options.writeUtf8Bom,
     );
+    _language = _readEnum(values[_keyLanguage], AppLanguage.values, _language);
     notifyListeners();
   }
 
@@ -312,6 +332,7 @@ class AppController extends ChangeNotifier {
         _keyConflictPolicy: options.conflictPolicy.name,
         _keyTimeOffsetMs: options.timeOffset.inMilliseconds,
         _keyWriteUtf8Bom: options.writeUtf8Bom,
+        _keyLanguage: _language.name,
       });
     } catch (_) {
       // Persistence is best effort; the in-memory setting still applies.
@@ -327,9 +348,9 @@ class AppController extends ChangeNotifier {
       entry.detection = inspection.detection;
       entry.encodingName = inspection.encodingName;
     } on SubtitleConversionException catch (error) {
-      entry.inspectionError = error.userMessage;
+      entry.inspectionError = error.failure;
     } catch (_) {
-      entry.inspectionError = 'This file could not be read.';
+      entry.inspectionError = ConversionFailure.unknown;
     }
     if (!_disposed) {
       notifyListeners();

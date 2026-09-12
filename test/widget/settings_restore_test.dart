@@ -58,16 +58,13 @@ void main() {
     expect(controller.options.writeUtf8Bom, isTrue);
 
     // ...and the controls show them, not their construction-time defaults.
-    expect(find.text('LRC · Lyric / LRC'), findsOneWidget);
+    expect(find.text('LRC · LRC'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
     expect(
       tester.widget<TextField>(find.byType(TextField).first).controller!.text,
       '500',
     );
-    expect(
-      tester.widget<Checkbox>(find.byType(Checkbox)).value,
-      isTrue,
-    );
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
   });
 
   testWidgets('a custom output folder is restored and shown', (

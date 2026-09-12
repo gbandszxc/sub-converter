@@ -4,12 +4,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sub_converter/models/conversion_job.dart';
+import 'package:sub_converter/models/loss_report.dart';
 import 'package:sub_converter/models/subtitle_exception.dart';
 import 'package:sub_converter/models/subtitle_format.dart';
 import 'package:sub_converter/services/file_service.dart';
 
 /// Sample SRT with two cues in Chinese and Japanese as well as ASCII.
-const String sampleSrt = '1\n'
+const String sampleSrt =
+    '1\n'
     '00:00:01,000 --> 00:00:03,000\n'
     'Hello 你好 こんにちは\n'
     '\n'
@@ -32,7 +34,11 @@ void main() {
     }
   });
 
-  File writeSource(String name, {String content = sampleSrt, List<int>? bytes}) {
+  File writeSource(
+    String name, {
+    String content = sampleSrt,
+    List<int>? bytes,
+  }) {
     final File file = File(p.join(workspace.path, name));
     file.writeAsBytesSync(bytes ?? utf8.encode(content));
     return file;
@@ -65,10 +71,7 @@ void main() {
       expect(inspection.format, SubtitleFormat.srt);
       expect(inspection.encodingName, 'UTF-8');
       expect(inspection.bytes, greaterThan(0));
-      expect(
-        File(p.join(workspace.path, 'E01.vtt')).existsSync(),
-        isFalse,
-      );
+      expect(File(p.join(workspace.path, 'E01.vtt')).existsSync(), isFalse);
     });
 
     test('reads a GBK encoded file without mojibake', () async {
@@ -85,8 +88,10 @@ void main() {
       expect(inspection.format, SubtitleFormat.srt);
       expect(inspection.encodingName, startsWith('GBK'));
 
-      final ConversionResult result =
-          await service.convertFile(source.path, options(target: SubtitleFormat.vtt));
+      final ConversionResult result = await service.convertFile(
+        source.path,
+        options(target: SubtitleFormat.vtt),
+      );
       expect(result.isSuccess, isTrue);
       expect(read(File(result.outputPath!)), contains('中文'));
     });
@@ -133,8 +138,10 @@ void main() {
       final File existing = File(p.join(workspace.path, 'E01.vtt'));
       existing.writeAsStringSync('do not touch');
 
-      final ConversionResult result =
-          await service.convertFile(source.path, options());
+      final ConversionResult result = await service.convertFile(
+        source.path,
+        options(),
+      );
 
       expect(result.outputPath, p.join(workspace.path, 'E01 (1).vtt'));
       expect(result.outputRenamed, isTrue);
@@ -182,14 +189,12 @@ void main() {
 
     test('writes into a custom folder', () async {
       final File source = writeSource('E01.srt');
-      final Directory out = Directory(p.join(workspace.path, 'out'))..createSync();
+      final Directory out = Directory(p.join(workspace.path, 'out'))
+        ..createSync();
 
       final ConversionResult result = await service.convertFile(
         source.path,
-        options(
-          location: OutputLocation.customDirectory,
-          directory: out.path,
-        ),
+        options(location: OutputLocation.customDirectory, directory: out.path),
       );
       expect(result.isSuccess, isTrue);
       expect(result.outputPath, p.join(out.path, 'E01.vtt'));
@@ -211,17 +216,27 @@ void main() {
     });
 
     test('reports an unidentifiable file as a failure, not a crash', () async {
-      final File source = writeSource('notes.txt', content: 'just some notes\n');
-      final ConversionResult result =
-          await service.convertFile(source.path, options());
+      final File source = writeSource(
+        'notes.txt',
+        content: 'just some notes\n',
+      );
+      final ConversionResult result = await service.convertFile(
+        source.path,
+        options(),
+      );
       expect(result.isFailure, isTrue);
       expect(result.failure, ConversionFailure.unsupportedFormat);
     });
 
     test('reports unparseable subtitle content as invalid syntax', () async {
-      final File source = writeSource('broken.srt', content: 'not a subtitle\n');
-      final ConversionResult result =
-          await service.convertFile(source.path, options());
+      final File source = writeSource(
+        'broken.srt',
+        content: 'not a subtitle\n',
+      );
+      final ConversionResult result = await service.convertFile(
+        source.path,
+        options(),
+      );
       expect(result.isFailure, isTrue);
       // The extension identifies it as SRT, but the content does not parse.
       expect(result.failure, ConversionFailure.invalidSubtitleSyntax);
@@ -241,7 +256,10 @@ void main() {
       final File source = writeSource('E01.srt');
       final ConversionResult result = await service.convertFile(
         source.path,
-        options(target: SubtitleFormat.srt, timeOffset: const Duration(seconds: 1)),
+        options(
+          target: SubtitleFormat.srt,
+          timeOffset: const Duration(seconds: 1),
+        ),
       );
       expect(read(File(result.outputPath!)), contains('00:00:02,000'));
     });
@@ -266,19 +284,15 @@ void main() {
       expect(progress, <int>[1, 2, 3]);
       expect(results.where((ConversionResult r) => r.isSuccess).length, 2);
       expect(results.where((ConversionResult r) => r.isFailure).length, 1);
-      expect(
-        File(p.join(workspace.path, 'a.vtt')).existsSync(),
-        isTrue,
-      );
-      expect(
-        File(p.join(workspace.path, 'c.vtt')).existsSync(),
-        isTrue,
-      );
+      expect(File(p.join(workspace.path, 'a.vtt')).existsSync(), isTrue);
+      expect(File(p.join(workspace.path, 'c.vtt')).existsSync(), isTrue);
     });
 
     test('handles an empty batch', () async {
-      final List<ConversionResult> results =
-          await service.convertAll(<String>[], options());
+      final List<ConversionResult> results = await service.convertAll(
+        <String>[],
+        options(),
+      );
       expect(results, isEmpty);
     });
 
@@ -304,15 +318,21 @@ void main() {
         'backwards.srt',
         content: '1\n00:00:05,000 --> 00:00:02,000\nbackwards\n',
       );
-      final ConversionResult result =
-          await service.convertFile(source.path, options(target: SubtitleFormat.srt));
+      final ConversionResult result = await service.convertFile(
+        source.path,
+        options(target: SubtitleFormat.srt),
+      );
       expect(result.isSuccess, isTrue);
       expect(result.isLossy, isTrue);
-      expect(result.warnings.join(' '), contains('ends before it starts'));
+      expect(
+        result.warnings.single,
+        const LossWarning(LossKind.invertedCueTiming),
+      );
     });
 
     test('converts a batch into a custom folder', () async {
-      final Directory out = Directory(p.join(workspace.path, 'out'))..createSync();
+      final Directory out = Directory(p.join(workspace.path, 'out'))
+        ..createSync();
       final List<String> sources = <String>[
         writeSource('a.srt').path,
         writeSource('b.srt').path,

@@ -1,13 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sub_converter/formats/built_in_formats.dart';
+import 'package:sub_converter/models/loss_report.dart';
 import 'package:sub_converter/models/subtitle_cue.dart';
 import 'package:sub_converter/models/subtitle_document.dart';
 import 'package:sub_converter/models/subtitle_style.dart';
 import 'package:sub_converter/models/subtitle_format.dart';
 import 'package:sub_converter/services/loss_analyzer.dart';
 
-/// LossAnalyzer turns capability gaps and source-side oddities into short
-/// user-facing notes. A lossy conversion is still a success.
+/// LossAnalyzer turns capability gaps and source-side oddities into structured
+/// loss kinds. A lossy conversion is still a success; the UI localizes the
+/// kinds into sentences.
 void main() {
   const LossAnalyzer analyzer = LossAnalyzer();
 
@@ -62,7 +64,10 @@ void main() {
       target: SubtitleFormat.sbv,
     );
     expect(report.isLossy, isTrue);
-    expect(report.warnings.single, contains('SBV'));
+    expect(
+      report.warnings.single,
+      const LossWarning(LossKind.inlineStylesDropped),
+    );
   });
 
   test('positioning and styles are reported for a format without them', () {
@@ -83,8 +88,13 @@ void main() {
       target: SubtitleFormat.srt,
     );
     expect(report.warnings.length, 2);
-    expect(report.warnings.join(' '), contains('position'));
-    expect(report.warnings.join(' '), contains('styles'));
+    expect(
+      report.warnings,
+      containsAll(<LossWarning>[
+        const LossWarning(LossKind.positionsDropped),
+        const LossWarning(LossKind.namedStylesDropped),
+      ]),
+    );
   });
 
   test('LRC reports dropped end times and joined lines', () {
@@ -99,14 +109,23 @@ void main() {
       source: SubtitleFormat.srt,
       target: SubtitleFormat.lrc,
     );
-    expect(report.warnings.join(' '), contains('line breaks'));
-    expect(report.warnings.join(' '), contains('end times'));
+    expect(
+      report.warnings,
+      containsAll(<LossWarning>[
+        const LossWarning(LossKind.lrcLineBreaksJoined),
+        const LossWarning(LossKind.lrcEndTimesDropped),
+      ]),
+    );
   });
 
   test('an LRC round trip is not reported as lossy', () {
     final LossReport report = analyze(
       document: documentWith(<SubtitleCue>[
-        SubtitleCue(start: Duration.zero, end: const Duration(seconds: 2), text: 'a'),
+        SubtitleCue(
+          start: Duration.zero,
+          end: const Duration(seconds: 2),
+          text: 'a',
+        ),
       ]),
       source: SubtitleFormat.lrc,
       target: SubtitleFormat.lrc,
@@ -127,7 +146,11 @@ void main() {
       target: SubtitleFormat.srt,
     );
     expect(report.isLossy, isTrue);
-    expect(report.warnings.single, contains('ends before it starts'));
+    expect(
+      report.warnings.single,
+      const LossWarning(LossKind.invertedCueTiming),
+    );
+    expect(report.warnings.single.count, 1);
   });
 
   test('several inverted cues are counted', () {
@@ -147,6 +170,9 @@ void main() {
       source: SubtitleFormat.srt,
       target: SubtitleFormat.srt,
     );
-    expect(report.warnings.single, contains('2 cues end before they start'));
+    expect(
+      report.warnings.single,
+      const LossWarning(LossKind.invertedCueTiming, count: 2),
+    );
   });
 }

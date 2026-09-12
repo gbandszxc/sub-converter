@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../i18n/app_strings.dart';
 import '../models/subtitle_format.dart';
 import '../screens/app_controller.dart';
 import 'ui_constants.dart';
@@ -12,6 +13,7 @@ class FormatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final bool unknown = entry.detectedFormat == null && !entry.isInspecting;
     final Color background = unknown
@@ -21,8 +23,17 @@ class FormatChip extends StatelessWidget {
         ? scheme.onErrorContainer
         : scheme.onSecondaryContainer;
 
+    final String tooltip;
+    if (entry.inspectionError != null) {
+      tooltip = strings.failureTitle(entry.inspectionError!);
+    } else if (entry.detectedFormat != null) {
+      tooltip = strings.formatDescription(entry.detectedFormat!);
+    } else {
+      tooltip = '';
+    }
+
     return Tooltip(
-      message: entry.inspectionError ?? entry.detectedFormat?.description ?? '',
+      message: tooltip,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
@@ -33,7 +44,7 @@ class FormatChip extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppSpacing.chipRadius),
             ),
             child: Text(
-              _label(),
+              _label(strings),
               style: AppTextStyles.caption.copyWith(
                 color: foreground,
                 fontWeight: FontWeight.w600,
@@ -52,11 +63,11 @@ class FormatChip extends StatelessWidget {
     );
   }
 
-  String _label() {
+  String _label(AppStrings strings) {
     if (entry.isInspecting) {
       return '...';
     }
     final SubtitleFormat? format = entry.detectedFormat;
-    return format?.label ?? 'Unknown';
+    return format?.label ?? strings.unknown;
   }
 }
