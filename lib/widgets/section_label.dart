@@ -27,9 +27,9 @@ class SectionLabel extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.xs),
               child: Icon(
-                Icons.info_outline,
-                size: 14,
-                color: mutedColor(context),
+                Icons.help_outline,
+                size: 18,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ),
