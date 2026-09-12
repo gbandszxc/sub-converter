@@ -16,7 +16,7 @@
 ```bash
 flutter pub get
 flutter analyze                  # 必须 "No issues found!"（0 issue）
-flutter test                     # 必须全绿；当前 360 个测试
+flutter test                     # 必须全绿；当前 368 个测试
 flutter build windows --release  # 产物 build\windows\x64\runner\Release\
 flutter build macos   --release
 flutter build linux   --release
@@ -40,7 +40,8 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 |---|---|---|
 | Parser / Writer 必须是纯 Dart | 不得 import Flutter、不得做 IO、不得 `print`；只做字符串进出 | `lib/models/subtitle_codec.dart` 的接口 + 审查 |
 | UI 不含字幕知识 | `lib/screens`、`lib/widgets` 不得 import `formats/**`；转换只经 `FileService` | 审查（`grep -rn "formats/" lib/screens lib/widgets` 应为空） |
-| 只有一个 IO 边界 | 文件读写只在 `lib/services/file_service.dart`；其余地方不得读写磁盘（`lib/screens/app_controller.dart` 也 import 了 `dart:io`，但仅用于 `Platform.isWindows` 判断路径大小写） | 审查（`grep -rn "dart:io" lib/` 应只命中这两处） |
+| 只有一个 IO 边界 | 文件读写与目录展开只在 `lib/services/file_service.dart`；其余地方不得读写磁盘（`lib/screens/app_controller.dart` 也 import 了 `dart:io`，但仅用于 `Platform.isWindows` 判断路径大小写） | 审查（`grep -rn "dart:io" lib/` 应只命中这两处） |
+| 拖入的目录只展开一级 | 目录→字幕文件的展开只在 `FileService.expandPaths`：只取该目录的直接子文件，按注册表中的扩展名（含 alias）过滤，按文件名排序，不递归、不读文件内容；判定目录靠文件系统而不是拖放项的 `DropItem` 类型（Windows 上插件把目录当普通路径上报）；列目录失败必须静默返回已列出的部分 | `test/services/file_service_test.dart`、`test/widget/drag_drop_test.dart` |
 | 平台通道只在 `lib/platform/` | 向 OS 查询系统字体（枚举 + 默认字体）走唯一的 `sub_converter/fonts` 通道：Dart 侧包装在 `lib/platform/system_fonts.dart`，策略（各平台默认字体与回退链）在纯 Dart 的 `lib/platform/app_typography.dart`，原生实现在三个 runner 内。查询失败必须静默降级到策略默认值，不得抛出 | `test/platform/app_typography_test.dart`、`test/widget/font_settings_test.dart` |
 | 绝不修改源文件 | `OutputPathResolver` 在任何策略下都拒绝把源文件当输出路径（含 overwrite） | `test/services/output_path_resolver_test.dart` |
 | 输出恒为 UTF-8（可选 BOM） | 不提供其他输出编码 | `test/services/file_service_test.dart` |
@@ -59,6 +60,7 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 | 语言设置默认跟随系统 | 新增用户可见设置项时，默认值应最少惊讶；语言默认 `AppLanguage.system`，持久化键 `language` | `test/i18n/localization_widget_test.dart` |
 | 不提交构建产物 | `build/`、`packaging/msi/.tools/`、`packaging/msi/.build/` 已 gitignore | `.gitignore` |
 | MSI 开始菜单必须用 `ProgramMenuFolder` | 它是 MSI 的系统文件夹属性（per-machine 时解析到 all-users 开始菜单）；`CommonProgramsFolder` **不是** MSI 属性，会被静默回退到 `TARGETDIR` | `packaging/msi/Product.wxs` 注释 + 安装日志（`/l*v`） |
+| 同版本重装必须能覆盖旧文件 | `MajorUpgrade` 必须带 `AllowSameVersionUpgrades="yes"`：exe/dll 的文件版本跟 pubspec 版本走，不带它时重装同版本 MSI 会保留旧版本文件（尤其 `sub_converter.exe`），并在控制面板重复注册产品 | `packaging/msi/Product.wxs` 注释 + `packaging/msi/README.md` 安装行为 |
 | WiX 告警要么修要么写清理由 | `-sreg` 关掉 DLL self-reg 探测；ICE60 因 `MaterialIcons-Regular.otf` 是 Flutter 资源、**不该**注册为系统字体而有意抑制 | `packaging/msi/build-msi.ps1` 注释 |
 
 **提交信息**：conventional commits（`feat(formats):` / `fix(services):` / `test(ui):` /
@@ -99,12 +101,15 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 9. **默认字体清单**（Windows 微软雅黑 / macOS 苹方 / Linux 桌面字体，及 CJK 回退链）—— 两份
    README 的「字体」段与 `lib/platform/app_typography.dart`；原生查询实现在三个 runner，见
    `docs/ARCHITECTURE.md` 的 System fonts 段。校验：`test/platform/app_typography_test.dart`。
+10. **拖入目录的行为**（只展开一级、按已注册扩展名过滤、不递归）—— 两份 README 的使用段与测试
+    覆盖段、`docs/ARCHITECTURE.md` 的 Input resolution 段、`lib/services/file_service.dart` 的
+    `expandPaths` doc comment。校验：`test/services/file_service_test.dart`。
 
 ## 6. 提交前自检
 
 ```bash
 flutter analyze   # 0 issue
-flutter test      # 全绿（当前 360）
+flutter test      # 全绿（当前 368）
 ```
 
 - [ ] 若改动用户可见行为 → 更新两份 README；涉及打包 → 更新 `packaging/msi/README.md`

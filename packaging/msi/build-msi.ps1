@@ -244,8 +244,13 @@ try {
     # from data\flutter_assets, not a system font. Registering it in the Font
     # table (which is what silences ICE60) would install a private icon font
     # globally, so the warning is the correct state of affairs here.
+    #
+    # ICE61 is suppressed deliberately: it fires because AllowSameVersionUpgrades
+    # makes the upgrade version range include the current product version, which
+    # is exactly the point - a rebuilt MSI without a version bump must replace
+    # the previous install (see Product.wxs, MajorUpgrade).
     Invoke-Step -Step 'light.exe: linking the MSI' -FilePath $lightExe `
-        -Arguments @('-nologo', '-ext', 'WixUIExtension', '-sice:ICE38', '-sice:ICE43', '-sice:ICE60', '-out', $msiPath, $productObj, $componentsObj)
+        -Arguments @('-nologo', '-ext', 'WixUIExtension', '-sice:ICE38', '-sice:ICE43', '-sice:ICE60', '-sice:ICE61', '-out', $msiPath, $productObj, $componentsObj)
 
     if (-not (Test-Path -LiteralPath $msiPath)) {
         throw "light.exe reported success but $msiPath does not exist."

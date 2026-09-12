@@ -34,9 +34,15 @@
              Description="Subtitle Converter - offline subtitle format converter (SRT, VTT, LRC, ASS, SSA, SBV)"
              Comments="Subtitle Converter" />
 
-    <!-- Block downgrades; a newer product with the same UpgradeCode is removed
-         automatically during a major upgrade. -->
-    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <!-- Block downgrades; a product with the same UpgradeCode is removed
+         automatically during a major upgrade. AllowSameVersionUpgrades matters
+         here: the Flutter build stamps every exe/dll with the pubspec version,
+         so a rebuild without a version bump produces files whose versions equal
+         the installed ones, and without this flag the Windows Installer would
+         keep the old versioned files (sub_converter.exe in particular) while
+         registering a second, side-by-side product. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed."
+                  AllowSameVersionUpgrades="yes" />
 
     <!-- Embed the CAB so the result is a single self-contained .msi file. -->
     <MediaTemplate EmbedCab="yes" />

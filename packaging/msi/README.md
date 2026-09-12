@@ -79,6 +79,13 @@ harvest.
   `Level="1"`.
 - Registers an entry in Add/Remove Programs with the application icon.
 - `MajorUpgrade` blocks downgrades and replaces an older version on upgrade.
+  `AllowSameVersionUpgrades="yes"` is set as well: the Flutter build stamps
+  every exe/dll with the pubspec version, so reinstalling a **rebuilt** MSI
+  without a version bump must remove the previous product first — otherwise
+  the Windows Installer keeps the old versioned files (the exe in particular)
+  and registers a side-by-side duplicate. Consequence: a same-version
+  reinstall runs a full uninstall + install, and the running app must be
+  closed during the upgrade.
 - Installing/uninstalling requires elevation (UAC), as expected for a
   per-machine package.
 

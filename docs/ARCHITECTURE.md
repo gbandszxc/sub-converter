@@ -46,6 +46,22 @@ Encoding is resolved before format detection because content-based detection nee
 text; the file name is only a corroborating signal (an extension bonus in `FormatDetector`).
 The encoding service does not use the file name.
 
+### Input resolution
+
+Before a path enters the pipeline, `FileService.expandPaths` resolves what the user handed over.
+A path that names a file passes through unchanged — an unrecognized one still becomes a row, so
+conversion reports the real error. A path that names a folder is scanned **one level deep** and
+contributes its direct files whose name carries a registered subtitle extension (the registry's
+lookup, so aliases such as `.subrip` count), sorted by file name for a stable list. Nested folders
+are not descended into, and a folder that holds nothing recognizable — or that cannot be listed —
+contributes nothing instead of failing the drop.
+
+`AppController.addPaths` is the single entry point for both the picker and a drop, so the UI never
+decides what a folder means. The folder check asks the file system rather than the drop item type:
+`desktop_drop` reports a dropped folder as a plain path on Windows and Linux, and only macOS
+delivers a `DropItemDirectory` (whose `children` are always empty), so the item type alone would
+miss the common case.
+
 ## Layering
 
 ```text
@@ -297,11 +313,13 @@ consistently.
 `lib/platform/system_fonts.dart` wraps the `sub_converter/fonts` method channel; each runner
 implements it natively:
 
-- **Windows** (`windows/runner/system_fonts.cpp`) — `EnumFontFamiliesExW` lists the installed
-  families (leading-`@` vertical variants dropped, duplicates merged case-insensitively); the
-  default family comes from `NONCLIENTMETRICS` `lfMessageFont`, i.e. the font the shell itself
-  uses ("Microsoft YaHei UI" on Chinese Windows, "Segoe UI" on English Windows, ...), so a
-  localized system gets its own UI face.
+- **Windows** (`windows/runner/system_fonts.cpp`) — the DirectWrite system font collection
+  lists the families, localized to the user's locale. DirectWrite is used deliberately instead
+  of GDI: it is the same matching the Flutter engine does, so weight-split GDI names
+  ("Microsoft YaHei UI Light", "MiSans Demibold") that the engine cannot resolve as families
+  never reach the picker. The default family still comes from `NONCLIENTMETRICS`
+  `lfMessageFont`, i.e. the font the shell itself uses ("Microsoft YaHei UI" on Chinese
+  Windows, "Segoe UI" on English Windows, ...), so a localized system gets its own UI face.
 - **macOS** (`macos/Runner/MainFlutterWindow.swift`) — `NSFontManager.availableFontFamilies`
   lists; "PingFang SC" is reported as the default.
 - **Linux** (`linux/runner/my_application.cc`) — the realized window's Pango font map

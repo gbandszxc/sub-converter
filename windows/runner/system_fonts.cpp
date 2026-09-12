@@ -2,11 +2,12 @@
 
 #include <windows.h>
 
+#include <dwrite.h>
+
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
 
-#include <algorithm>
 #include <set>
 #include <string>
 #include <vector>
@@ -19,41 +20,80 @@ namespace {
 constexpr wchar_t kFallbackFamily[] = L"Microsoft YaHei UI";
 constexpr char kChannelName[] = "sub_converter/fonts";
 
-// GDI reports the same family once per script/charset; the localized name
-// may also differ in case. This keeps one spelling per family.
+// The localized name may be reported by several locales or differ in case.
+// This keeps one spelling per family.
 struct CaseInsensitiveLess {
   bool operator()(const std::wstring& left, const std::wstring& right) const {
     return _wcsicmp(left.c_str(), right.c_str()) < 0;
   }
 };
 
+// DirectWrite resolves text by typographic family, so weight-split GDI
+// families ("Microsoft YaHei UI Light", "MiSans Demibold", "等线 Light") are
+// not families the engine can match by name - they are faces of their base
+// family. Enumerating the DirectWrite system collection therefore yields
+// exactly the names Flutter can render.
+std::wstring FirstLocalizedFaceName(IDWriteLocalizedStrings* names) {
+  wchar_t locale[LOCALE_NAME_MAX_LENGTH] = {};
+  if (::GetUserDefaultLocaleName(locale, LOCALE_NAME_MAX_LENGTH) == 0) {
+    wcscpy_s(locale, L"en-us");
+  }
+  UINT32 index = 0;
+  BOOL exists = FALSE;
+  if (FAILED(names->FindLocaleName(locale, &index, &exists)) || !exists) {
+    if (FAILED(names->FindLocaleName(L"en-us", &index, &exists)) || !exists) {
+      index = 0;
+    }
+  }
+  UINT32 length = 0;
+  if (FAILED(names->GetStringLength(index, &length))) {
+    return std::wstring();
+  }
+  std::wstring name(length, L'\0');
+  if (FAILED(names->GetString(index, &name[0], length + 1))) {
+    name.clear();
+  }
+  return name;
+}
+
 }  // namespace
 
 std::vector<std::string> InstalledFontFamilies() {
-  std::set<std::wstring, CaseInsensitiveLess> names;
-  LOGFONTW probe = {};
-  probe.lfCharSet = DEFAULT_CHARSET;
-  HDC dc = ::GetDC(nullptr);
-  if (dc != nullptr) {
-    ::EnumFontFamiliesExW(
-        dc, &probe,
-        [](const LOGFONTW* logfont, const TEXTMETRICW*, DWORD,
-           LPARAM param) -> int {
-          auto* names = reinterpret_cast<
-              std::set<std::wstring, CaseInsensitiveLess>*>(param);
-          if (logfont->lfFaceName[0] != L'\0' && logfont->lfFaceName[0] != L'@') {
-            names->insert(std::wstring(logfont->lfFaceName));
-          }
-          return 1;  // continue enumeration
-        },
-        reinterpret_cast<LPARAM>(&names), 0);
-    ::ReleaseDC(nullptr, dc);
-  }
   std::vector<std::string> families;
-  families.reserve(names.size());
-  for (const std::wstring& name : names) {
-    families.push_back(Utf8FromUtf16(name.c_str()));
+  IDWriteFactory* factory = nullptr;
+  if (FAILED(::DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED,
+                                   __uuidof(IDWriteFactory),
+                                   reinterpret_cast<IUnknown**>(&factory))) ||
+      factory == nullptr) {
+    return families;
   }
+  IDWriteFontCollection* collection = nullptr;
+  if (SUCCEEDED(factory->GetSystemFontCollection(&collection, FALSE)) &&
+      collection != nullptr) {
+    std::set<std::wstring, CaseInsensitiveLess> names;
+    const UINT32 count = collection->GetFontFamilyCount();
+    for (UINT32 i = 0; i < count; ++i) {
+      IDWriteFontFamily* family = nullptr;
+      if (FAILED(collection->GetFontFamily(i, &family)) || family == nullptr) {
+        continue;
+      }
+      IDWriteLocalizedStrings* family_names = nullptr;
+      if (SUCCEEDED(family->GetFamilyNames(&family_names)) &&
+          family_names != nullptr) {
+        const std::wstring name = FirstLocalizedFaceName(family_names);
+        if (!name.empty() && name[0] != L'@') {
+          names.insert(name);
+        }
+        family_names->Release();
+      }
+      family->Release();
+    }
+    for (const std::wstring& name : names) {
+      families.push_back(Utf8FromUtf16(name.c_str()));
+    }
+    collection->Release();
+  }
+  factory->Release();
   return families;
 }
 
