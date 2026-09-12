@@ -8,6 +8,7 @@ import 'package:sub_converter/models/conversion_job.dart';
 import 'package:sub_converter/models/loss_report.dart';
 import 'package:sub_converter/models/subtitle_exception.dart';
 import 'package:sub_converter/models/subtitle_format.dart';
+import 'package:sub_converter/platform/system_fonts.dart';
 import 'package:sub_converter/screens/app_controller.dart';
 import 'package:sub_converter/screens/home_screen.dart';
 import 'package:sub_converter/services/file_service.dart';
@@ -145,13 +146,53 @@ Future<void> pumpHomeScreen(
   await tester.pumpAndSettle();
 }
 
+/// Test double for [SystemFonts] with canned answers; never touches a
+/// platform channel.
+class FakeSystemFonts implements SystemFonts {
+  FakeSystemFonts({
+    this.families = const <String>[],
+    this.desktopDefault,
+    this.failure,
+  });
+
+  /// Families the OS would report.
+  final List<String> families;
+
+  /// The OS-reported default UI family, if any.
+  final String? desktopDefault;
+
+  /// When set, queries throw this instead of answering, simulating a
+  /// missing or broken platform implementation.
+  final Object? failure;
+
+  @override
+  Future<List<String>> installedFontFamilies() async {
+    if (failure != null) {
+      throw failure!;
+    }
+    return families;
+  }
+
+  @override
+  Future<String?> defaultFontFamily() async {
+    if (failure != null) {
+      throw failure!;
+    }
+    return desktopDefault;
+  }
+}
+
 /// Builds a controller with fakes, suitable for widget tests.
 AppController testController({
   FakeFileService? fileService,
   InMemorySettingsStore? settingsStore,
+  FakeSystemFonts? systemFonts,
+  String? platformName,
 }) {
   return AppController(
     fileService: fileService ?? FakeFileService(),
     settingsStore: settingsStore ?? InMemorySettingsStore(),
+    systemFonts: systemFonts,
+    platformName: platformName,
   );
 }

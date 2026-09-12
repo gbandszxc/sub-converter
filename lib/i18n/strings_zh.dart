@@ -83,6 +83,17 @@ class AppStringsZh extends AppStrings {
   String get languageChinese => '简体中文';
 
   @override
+  String get font => '字体';
+
+  @override
+  String get fontSystemDefault => '跟随系统';
+
+  @override
+  String get fontSystemDefaultHelp =>
+      '使用系统默认界面字体：Windows 微软雅黑、macOS 苹方、Linux 桌面当前字体；'
+      '也可选择任意已安装字体。';
+
+  @override
   String get convert => '开始转换';
 
   @override

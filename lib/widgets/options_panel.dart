@@ -11,6 +11,9 @@ import 'ui_constants.dart';
 
 /// Right-hand panel with everything that controls a conversion run.
 class OptionsPanel extends StatelessWidget {
+  /// Sentinel dropdown value for "follow the system default"; a real font
+  /// family can never be the empty string.
+  static const String _systemDefaultChoice = '';
   const OptionsPanel({
     super.key,
     required this.controller,
@@ -41,6 +44,8 @@ class OptionsPanel extends StatelessWidget {
           _bomCheckbox(context, strings),
           const SizedBox(height: AppSpacing.lg),
           _language(context, strings),
+          const SizedBox(height: AppSpacing.lg),
+          _font(context, strings),
           const SizedBox(height: AppSpacing.lg),
           _convertButton(context, strings),
         ],
@@ -246,6 +251,51 @@ class OptionsPanel extends StatelessWidget {
       case AppLanguage.chinese:
         return strings.languageChinese;
     }
+  }
+
+  /// The app font picker. `null` (follow the system default) is carried
+  /// through [LabelledDropdown] as [_systemDefaultChoice]; each real font is
+  /// previewed in its own family so the list doubles as a specimen sheet.
+  Widget _font(BuildContext context, AppStrings strings) {
+    final String? selected = controller.fontFamily;
+    final List<String> families = <String>[
+      ...controller.systemFontFamilies,
+      // A persisted font that the OS no longer offers stays selectable
+      // instead of breaking the dropdown's "value must be an item" rule.
+      if (selected != null &&
+          !controller.systemFontFamilies.contains(selected))
+        selected,
+    ];
+    return LabelledDropdown<String>(
+      label: strings.font,
+      value: selected ?? _systemDefaultChoice,
+      helperText: selected == null ? strings.fontSystemDefaultHelp : null,
+      items: <DropdownMenuItem<String>>[
+        DropdownMenuItem<String>(
+          value: _systemDefaultChoice,
+          child: Text(
+            strings.fontSystemDefault,
+            style: AppTextStyles.body,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        ...families.map(
+          (String family) => DropdownMenuItem<String>(
+            value: family,
+            child: Text(
+              family,
+              style: AppTextStyles.body.copyWith(fontFamily: family),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ],
+      onChanged: (String? choice) {
+        controller.setFontFamily(
+          choice == _systemDefaultChoice ? null : choice,
+        );
+      },
+    );
   }
 
   Widget _convertButton(BuildContext context, AppStrings strings) {

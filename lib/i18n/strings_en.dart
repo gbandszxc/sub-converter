@@ -86,6 +86,18 @@ class AppStringsEn extends AppStrings {
   String get languageChinese => '简体中文';
 
   @override
+  String get font => 'Font';
+
+  @override
+  String get fontSystemDefault => 'System default';
+
+  @override
+  String get fontSystemDefaultHelp =>
+      'Uses the system UI font: Microsoft YaHei on Windows, PingFang on '
+      'macOS, and the desktop font on Linux. Any installed font can be '
+      'picked instead.';
+
+  @override
   String get convert => 'Convert';
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'i18n/app_language.dart';
 import 'i18n/app_strings.dart';
 import 'i18n/strings_scope.dart';
+import 'platform/app_typography.dart';
 import 'screens/app_controller.dart';
 import 'screens/home_screen.dart';
 
@@ -72,7 +73,25 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
     );
   }
 
+  /// Builds the theme around the app font: the user's pick, else the
+  /// platform's default policy. The fallback chain stays in charge of
+  /// scripts and weights the chosen family cannot render.
   ThemeData _themeFor(Brightness brightness) {
+    final String? family = _controller.effectiveFontFamily;
+    final List<String> fallback = AppTypography.fallbackChain(
+      _controller.platformName,
+      primary: family,
+    );
+    TextTheme textTheme = const TextTheme(
+      bodyMedium: TextStyle(fontSize: 13),
+      bodySmall: TextStyle(fontSize: 12),
+    );
+    if (family != null) {
+      textTheme = textTheme.apply(
+        fontFamily: family,
+        fontFamilyFallback: fallback,
+      );
+    }
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
@@ -80,10 +99,7 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
         brightness: brightness,
       ),
       visualDensity: VisualDensity.compact,
-      textTheme: const TextTheme(
-        bodyMedium: TextStyle(fontSize: 13),
-        bodySmall: TextStyle(fontSize: 12),
-      ),
+      textTheme: textTheme,
     );
   }
 }

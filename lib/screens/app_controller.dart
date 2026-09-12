@@ -8,6 +8,8 @@ import '../i18n/app_language.dart';
 import '../models/conversion_job.dart';
 import '../models/subtitle_exception.dart';
 import '../models/subtitle_format.dart';
+import '../platform/app_typography.dart';
+import '../platform/system_fonts.dart';
 import '../services/file_service.dart';
 import '../services/format_detector.dart';
 import '../services/settings_store.dart';
@@ -52,8 +54,12 @@ class AppController extends ChangeNotifier {
     FileService? fileService,
     SettingsStore? settingsStore,
     ConversionOptions? initialOptions,
+    SystemFonts? systemFonts,
+    String? platformName,
   }) : _fileService = fileService ?? FileService(),
        _settingsStore = settingsStore ?? SharedPreferencesSettingsStore(),
+       _systemFonts = systemFonts ?? const SystemFonts(),
+       platformName = platformName ?? Platform.operatingSystem,
        _options =
            initialOptions ??
            const ConversionOptions(targetFormat: SubtitleFormat.srt);
@@ -65,15 +71,31 @@ class AppController extends ChangeNotifier {
   static const String _keyTimeOffsetMs = 'timeOffsetMs';
   static const String _keyWriteUtf8Bom = 'writeUtf8Bom';
   static const String _keyLanguage = 'language';
+  static const String _keyFontFamily = 'fontFamily';
 
   final FileService _fileService;
   final SettingsStore _settingsStore;
+  final SystemFonts _systemFonts;
+
+  /// `Platform.operatingSystem`, injectable so tests can pin the platform
+  /// (and its default font policy) regardless of the host running the tests.
+  final String platformName;
 
   final List<SubtitleFileEntry> _entries = <SubtitleFileEntry>[];
   final Set<String> _knownPaths = <String>{};
 
   ConversionOptions _options;
   AppLanguage _language = AppLanguage.system;
+
+  /// The user's app font pick, or `null` to follow the system default.
+  String? _fontFamily;
+
+  /// Installed system font families, filled in asynchronously after startup.
+  List<String> _systemFontFamilies = const <String>[];
+
+  /// The desktop's own default UI family as the OS reports it, if known.
+  String? _platformDefaultFamily;
+
   bool _isConverting = false;
   bool _disposed = false;
 
@@ -91,6 +113,25 @@ class AppController extends ChangeNotifier {
   /// [ConversionOptions]; the resolution against the platform locale happens
   /// in `main.dart`.
   AppLanguage get language => _language;
+
+  /// The user's app font pick, or `null` when following the system default.
+  String? get fontFamily => _fontFamily;
+
+  /// Installed system font families for the picker; empty until the OS
+  /// answers (or when the OS query is unavailable).
+  List<String> get systemFontFamilies => _systemFontFamilies;
+
+  /// The desktop's own default UI family as the OS reports it, if known.
+  String? get platformDefaultFamily => _platformDefaultFamily;
+
+  /// The family the app renders in: the user's pick, else the platform's
+  /// default policy (see `AppTypography`), else `null` for Flutter's own
+  /// default.
+  String? get effectiveFontFamily => fontFamily ??
+      AppTypography.defaultFamily(
+        platform: platformName,
+        desktopDefault: _platformDefaultFamily,
+      );
 
   bool get isConverting => _isConverting;
 
@@ -283,6 +324,17 @@ class AppController extends ChangeNotifier {
     unawaited(_persist());
   }
 
+  /// Changes the app font, or follows the system default with `null`.
+  /// The theme rebuild in `main.dart` applies it immediately.
+  void setFontFamily(String? family) {
+    if (_fontFamily == family) {
+      return;
+    }
+    _fontFamily = family;
+    notifyListeners();
+    unawaited(_persist());
+  }
+
   // --- Persistence ---------------------------------------------------------
 
   /// Loads persisted settings; a missing or corrupt value keeps the default.
@@ -319,6 +371,30 @@ class AppController extends ChangeNotifier {
           : _options.writeUtf8Bom,
     );
     _language = _readEnum(values[_keyLanguage], AppLanguage.values, _language);
+    _fontFamily = _readString(values[_keyFontFamily]);
+    notifyListeners();
+    // The font query rides along after the persisted settings apply; the UI
+    // rebuilds again when the OS answer arrives.
+    unawaited(_loadSystemFonts());
+  }
+
+  /// Asks the OS which fonts are installed and which family it uses as its
+  /// own default. Best effort: a missing or failing platform answer leaves
+  /// the lists empty and the curated defaults in `AppTypography` in charge.
+  Future<void> _loadSystemFonts() async {
+    final List<String> families;
+    final String? desktopDefault;
+    try {
+      families = await _systemFonts.installedFontFamilies();
+      desktopDefault = await _systemFonts.defaultFontFamily();
+    } catch (_) {
+      return;
+    }
+    if (_disposed) {
+      return;
+    }
+    _systemFontFamilies = families;
+    _platformDefaultFamily = desktopDefault;
     notifyListeners();
   }
 
@@ -333,6 +409,7 @@ class AppController extends ChangeNotifier {
         _keyTimeOffsetMs: options.timeOffset.inMilliseconds,
         _keyWriteUtf8Bom: options.writeUtf8Bom,
         _keyLanguage: _language.name,
+        _keyFontFamily: _fontFamily,
       });
     } catch (_) {
       // Persistence is best effort; the in-memory setting still applies.

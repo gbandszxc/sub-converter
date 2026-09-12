@@ -69,6 +69,9 @@ abstract class AppStrings {
   String get languageSystem;
   String get languageEnglish;
   String get languageChinese;
+  String get font;
+  String get fontSystemDefault;
+  String get fontSystemDefaultHelp;
   String get convert;
 
   /// `Convert 1 file` / `Convert 3 files`.
