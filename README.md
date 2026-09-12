@@ -47,6 +47,26 @@ The release artifacts land at:
 | macOS | `build/macos/Build/Products/Release/Subtitle Converter.app` |
 | Linux | `build/linux/x64/release/bundle/sub_converter` |
 
+### Build a Windows installer (MSI)
+
+The Windows build can be packaged as a per-machine x64 installer with the WiX Toolset v3
+(portable, no system install and no admin rights needed to build):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
+```
+
+That runs `flutter build windows --release`, harvests the whole Release folder, and writes
+`build\msi\sub-converter-<version>.msi` — a single self-contained file (the CAB is embedded).
+Pass `-SkipBuild` to package an existing release build, or `-Version x.y.z` to override the
+version taken from `pubspec.yaml`.
+
+The installer offers a licence page, a selectable install directory (default
+`%ProgramFiles%\Subtitle Converter`) and an optional Start Menu shortcut (ticked by default); it
+registers an entry in Add/Remove Programs with the app icon, and `MajorUpgrade` replaces older
+versions. See [`packaging/msi/README.md`](packaging/msi/README.md) for details, silent-install
+flags and what the package contains.
+
 ### Requirements
 
 `pubspec.yaml` declares `environment: sdk: ^3.13.3`, so a Dart 3.13.3 (or later 3.x) SDK is
@@ -214,6 +234,11 @@ test/
   core/ formats/ services/ widget/ integration/
                                 Unit, matrix, path, UI and end-to-end tests.
   fixtures/                     Real sample files per format.
+packaging/
+  msi/                          WiX v3 definition, build script and assets for
+                                the Windows installer; see its own README.
+.github/workflows/ci.yml        Tests, release builds and launch checks on
+                                Windows, macOS and Linux.
 ```
 
 ## Privacy

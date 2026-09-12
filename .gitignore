@@ -46,3 +46,9 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# MSI packaging: WiX portable toolset, heat/candle/light intermediates,
+# and the generated installer.
+/packaging/msi/.tools/
+/packaging/msi/.build/
+/build/msi/

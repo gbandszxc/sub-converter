@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Subtitle Converter MSI installer definition (WiX Toolset v3).
+
+  Per-machine x64 install under "%ProgramFiles%\Subtitle Converter" (the
+  directory is user-selectable on the install-directory page). The whole Flutter
+  Release folder is harvested at build time by heat.exe into Components.wxs (a
+  generated intermediate, see build-msi.ps1); this file declares the product
+  metadata, the directory layout, the UI sequence and the optional Start Menu
+  shortcut.
+
+  Preprocessor variables supplied by the build script:
+    ProductVersion  MSI product version, e.g. "0.1.0" (numeric x.y.z)
+    ReleaseDir      path to the Release folder harvested by heat.exe
+    LicenseRtf      path to the licence text shown by the UI
+  Optional:
+    IconPath        path to app_icon.ico. When defined the shortcut and the
+                    Add/Remove Programs entry use it.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="Subtitle Converter"
+           Language="1033"
+           Version="$(var.ProductVersion)"
+           Manufacturer="Subtitle Converter"
+           UpgradeCode="5266B4BA-95B3-4D38-A5A0-E24BEA859278">
+
+    <!-- Per-machine x64 package: installs into Program Files for all users. -->
+    <Package Id="*"
+             InstallerVersion="500"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Platform="x64"
+             Description="Subtitle Converter - offline subtitle format converter (SRT, VTT, LRC, ASS, SSA, SBV)"
+             Comments="Subtitle Converter" />
+
+    <!-- Block downgrades; a newer product with the same UpgradeCode is removed
+         automatically during a major upgrade. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <!-- Embed the CAB so the result is a single self-contained .msi file. -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Use the application icon in Add/Remove Programs when available. -->
+    <?ifdef IconPath ?>
+    <Icon Id="SubtitleConverterIcon.ico" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="SubtitleConverterIcon.ico" />
+    <?endif?>
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="Subtitle Converter" />
+      </Directory>
+      <!-- ProgramMenuFolder is a real Windows Installer system folder property:
+           for a per-machine install it resolves to the all-users
+           Start Menu\Programs tree (C:\ProgramData\Microsoft\Windows\Start Menu\Programs).
+           CommonProgramsFolder must NOT be used here: the Windows Installer
+           does not know it, so it silently falls back to TARGETDIR. -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Subtitle Converter" />
+      </Directory>
+    </Directory>
+
+    <!-- The application itself: not removable, it is the product. -->
+    <Feature Id="MainFeature"
+             Title="Subtitle Converter"
+             Description="The Subtitle Converter application and its Flutter runtime."
+             Level="1"
+             Absent="disallow">
+      <!-- Files harvested from the Release folder by heat.exe. -->
+      <ComponentGroupRef Id="AppFiles" />
+    </Feature>
+
+    <!-- Optional, selected by default; clearing it on the Customize page skips
+         the Start Menu shortcut. -->
+    <Feature Id="StartMenuShortcutFeature"
+             Title="Start Menu shortcut"
+             Description="Add Subtitle Converter to the Start Menu for all users."
+             Level="1">
+      <ComponentRef Id="ApplicationShortcut" />
+    </Feature>
+
+    <!-- Start Menu shortcut. The registry value is the component key path so
+         the component can be installed without owning a file. -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut"
+                 Guid="E1ABDCA5-29C3-4E71-BB0A-E5F7D22EDA0D">
+        <?ifdef IconPath ?>
+        <Shortcut Id="StartMenuShortcut"
+                  Name="Subtitle Converter"
+                  Description="Offline subtitle format converter"
+                  Target="[INSTALLFOLDER]sub_converter.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="SubtitleConverterIcon.ico" />
+        <?endif?>
+        <?ifndef IconPath ?>
+        <Shortcut Id="StartMenuShortcut"
+                  Name="Subtitle Converter"
+                  Description="Offline subtitle format converter"
+                  Target="[INSTALLFOLDER]sub_converter.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <?endif?>
+        <RemoveFolder Id="RemoveApplicationProgramsFolder"
+                      Directory="ApplicationProgramsFolder"
+                      On="uninstall" />
+        <!-- The folder itself is the key path: the component owns no file, and
+             the CreateFolder row is what keeps an otherwise-empty folder
+             installable. A registry key path would have to live under HKCU for
+             a Start Menu component, which is wrong for a per-machine install
+             (that is what ICE38/43/57 warn about). -->
+        <CreateFolder />
+      </Component>
+    </DirectoryRef>
+
+    <!--
+      WixUI_InstallDir provides the licence and install-directory pages. A small
+      custom page follows it so the user can decline the Start Menu shortcut.
+      Order="999" makes these publishes run after the built-in ones and therefore
+      win; the NOT Installed guard leaves maintenance installs (repair/uninstall)
+      on the built-in navigation.
+    -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+    <!-- Tick state of the Start Menu checkbox; 1 keeps the recommended default,
+         which is also what a silent install (/qn) gets since no UI runs. -->
+    <Property Id="INSTALLSTARTMENU" Value="1" Secure="yes" />
+
+    <UI Id="SubtitleConverterUI">
+      <UIRef Id="WixUI_InstallDir" />
+      <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+      <Dialog Id="ShortcutOptionsDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Start Menu shortcut" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="373" Height="0" />
+        <Control Id="Description" Type="Text" X="25" Y="60" Width="320" Height="30" Transparent="yes" NoPrefix="yes" Text="Choose whether Subtitle Converter adds a Start Menu shortcut for every user on this computer." />
+        <Control Id="ShortcutCheckBox" Type="CheckBox" X="25" Y="100" Width="320" Height="17"
+                 Property="INSTALLSTARTMENU" CheckBoxValue="1"
+                 Text="Create a &amp;Start Menu shortcut (recommended)" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="373" Height="0" />
+
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)">
+          <Publish Event="NewDialog" Value="InstallDirDlg">1</Publish>
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
+          <Publish Event="AddLocal" Value="StartMenuShortcutFeature">INSTALLSTARTMENU = "1"</Publish>
+          <Publish Event="Remove" Value="StartMenuShortcutFeature">INSTALLSTARTMENU &lt;&gt; "1"</Publish>
+          <Publish Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+      </Dialog>
+
+      <!-- InstallDirDlg normally goes straight to VerifyReadyDlg; route it through
+           the shortcut page instead, and make Back come home to it. -->
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="ShortcutOptionsDlg" Order="999">WIXUI_DONTVALIDATEPATH OR WIXUI_INSTALLDIR_VALID="1"</Publish>
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="ShortcutOptionsDlg" Order="999">NOT Installed</Publish>
+    </UI>
+  </Product>
+</Wix>
