@@ -18,7 +18,8 @@ class DecodedText {
   final String text;
 
   /// Human-readable encoding name, e.g. `UTF-8`, `UTF-8 BOM`, `UTF-16 LE`,
-  /// `UTF-16 BE`, `GB18030`, `GBK`, `Shift_JIS`, `EUC-JP`, `Windows-1252`.
+  /// `UTF-16 BE`, `UTF-32 LE`, `UTF-32 BE`, `GB18030`, `GBK`, `Shift_JIS`,
+  /// `EUC-JP`, `Windows-1252`.
   final String encodingName;
 
   /// Whether the source started with a byte order mark.
