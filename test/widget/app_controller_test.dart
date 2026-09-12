@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:sub_converter/models/conversion_job.dart';
 import 'package:sub_converter/models/subtitle_exception.dart';
 import 'package:sub_converter/models/subtitle_format.dart';
@@ -31,21 +34,31 @@ void main() {
       expect(controller.entries.last.detectedFormat, SubtitleFormat.ass);
     });
 
-    test(
-      'duplicate paths are ignored, case-insensitively on Windows',
-      () async {
-        final AppController controller = testController();
-        addTearDown(controller.dispose);
+    test('duplicate paths are ignored', () async {
+      final AppController controller = testController();
+      addTearDown(controller.dispose);
 
-        await controller.addPaths(<String>[
-          r'C:\Movies\A.srt',
-          r'C:\Movies\A.srt',
-          r'C:\Movies\a.SRT',
-        ]);
+      final String path = p.join('movies', 'A.srt');
+      await controller.addPaths(<String>[path, path, path]);
 
-        expect(controller.fileCount, 1);
-      },
-    );
+      expect(controller.fileCount, 1);
+    });
+
+    test('case-only differences collapse on Windows but not elsewhere', () async {
+      // Duplicate detection is case-insensitive where the file system is
+      // (Windows) and case-sensitive where it is not (macOS, Linux). Asserting
+      // the platform-appropriate contract is what makes this suite pass on all
+      // three targets; hardcoding Windows behaviour failed on the other two.
+      final AppController controller = testController();
+      addTearDown(controller.dispose);
+
+      await controller.addPaths(<String>[
+        p.join('movies', 'A.srt'),
+        p.join('movies', 'a.srt'),
+      ]);
+
+      expect(controller.fileCount, Platform.isWindows ? 1 : 2);
+    });
 
     test('inspection failure keeps the row with an explanation', () async {
       final FakeFileService service = FakeFileService(
