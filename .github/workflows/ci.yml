@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FLUTTER_CHANNEL: stable
+
+jobs:
+  # Each desktop target runs the full test suite, builds a release bundle and
+  # then launches the built binary to prove it actually starts on that OS.
+  linux:
+    name: Linux (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.4
+          cache: true
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+            xvfb libgl1-mesa-dri libegl1 mesa-utils
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build linux --release
+      - name: Launch the built binary
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          set -euo pipefail
+          cd build/linux/x64/release/bundle
+          # 124 from `timeout` means the process was still alive when the
+          # timeout fired, i.e. it started and kept running.
+          set +e
+          timeout 15 xvfb-run -a ./sub_converter > app.log 2>&1
+          code=$?
+          set -e
+          cat app.log || true
+          if [ "$code" -ne 124 ]; then
+            echo "::error::the Linux binary exited early (code $code)"
+            exit 1
+          fi
+          echo "Linux binary started and stayed alive for 15s"
+
+  macOS:
+    name: macOS (macos-latest)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.4
+          cache: true
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build macos --release
+      - name: Launch the built app bundle
+        run: |
+          set -euo pipefail
+          APP=$(ls -d build/macos/Build/Products/Release/*.app | head -1)
+          # Discover the executable instead of assuming the product name.
+          BIN=$(find "$APP/Contents/MacOS" -type f -perm -u+x | head -1)
+          echo "launching $BIN"
+          "$BIN" > app.log 2>&1 &
+          pid=$!
+          sleep 12
+          if kill -0 "$pid" 2>/dev/null; then
+            echo "macOS app started and stayed alive for 12s"
+            kill "$pid" || true
+          else
+            echo "::error::the macOS app exited early"
+            cat app.log || true
+            exit 1
+          fi
+
+  windows:
+    name: Windows (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.4
+          cache: true
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build windows --release
+      - name: Launch the built binary
+        shell: pwsh
+        run: |
+          $exe = "build\windows\x64\runner\Release\sub_converter.exe"
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 12
+          if ($process.HasExited) {
+            Write-Error "the Windows binary exited early with code $($process.ExitCode)"
+            exit 1
+          }
+          Write-Host "Windows binary started and stayed alive for 12s"
+          Stop-Process -Id $process.Id -Force
