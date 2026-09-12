@@ -5,6 +5,8 @@
 #include <gdk/gdkx.h>
 #endif
 
+#include <string.h>
+
 #include "flutter/generated_plugin_registrant.h"
 
 struct _MyApplication {
@@ -19,21 +21,48 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
-// The desktop's default UI font (the gtk-font-name setting, e.g.
-// "Cantarell 11" on GNOME) reduced to its family name. Returns null when
-// the setting is absent or names no family.
+// KDE Plasma does not always feed GTK's settings (Wayland sessions in
+// particular), so fall back to the font KDE records itself in kdeglobals.
+// "General/font=" is a QFont string ("Family[,style][,size],...") whose first
+// comma-separated field is the family.
+static gchar* kde_font_name() {
+  GKeyFile* config = g_key_file_new();
+  gchar* path =
+      g_build_filename(g_get_user_config_dir(), "kdeglobals", nullptr);
+  gchar* font_name = nullptr;
+  if (g_key_file_load_from_file(config, path, G_KEY_FILE_NONE, nullptr)) {
+    gchar* value = g_key_file_get_string(config, "General", "font", nullptr);
+    if (value != nullptr) {
+      gchar* comma = strchr(value, ',');
+      if (comma != nullptr) {
+        *comma = '\0';
+      }
+      font_name = g_strstrip(g_strdup(value));
+      g_free(value);
+    }
+  }
+  g_free(path);
+  g_key_file_free(config);
+  return font_name;
+}
+
+// The desktop's default UI font reduced to its family name: the gtk-font-name
+// setting (e.g. "Cantarell 11" on GNOME) when the session provides it, else
+// KDE's kdeglobals. Returns null when neither names a family.
 static FlValue* default_font_family() {
   GtkSettings* settings = gtk_settings_get_default();
-  if (settings == nullptr) {
-    return nullptr;
-  }
   gchar* font_name = nullptr;
-  g_object_get(settings, "gtk-font-name", &font_name, nullptr);
+  if (settings != nullptr) {
+    g_object_get(settings, "gtk-font-name", &font_name, nullptr);
+  }
+  if (font_name == nullptr || *font_name == '\0') {
+    g_free(font_name);
+    font_name = kde_font_name();
+  }
   PangoFontDescription* description =
       pango_font_description_from_string(font_name != nullptr ? font_name : "");
   const gchar* family = pango_font_description_get_family(description);
-  FlValue* result =
-      family != nullptr ? fl_value_new_string(family) : nullptr;
+  FlValue* result = family != nullptr ? fl_value_new_string(family) : nullptr;
   pango_font_description_free(description);
   g_free(font_name);
   return result;

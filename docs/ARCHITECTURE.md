@@ -305,8 +305,10 @@ implements it natively:
 - **macOS** (`macos/Runner/MainFlutterWindow.swift`) — `NSFontManager.availableFontFamilies`
   lists; "PingFang SC" is reported as the default.
 - **Linux** (`linux/runner/my_application.cc`) — the realized window's Pango font map
-  (fontconfig) lists; the default family is the desktop's `gtk-font-name` setting (e.g.
-  "Cantarell 11" on GNOME) parsed to its family name via `PangoFontDescription`.
+  (fontconfig) lists; the default family is the desktop's default UI font: the
+  `gtk-font-name` setting when the session provides it (GNOME, or KDE with plasma
+  integration), else KDE's own record in `kdeglobals` (`General/font=`, a QFont string whose
+  first comma-separated field is the family).
 
 Both queries degrade silently: if the channel is missing (widget tests, an unsupported host)
 the app falls back to the curated defaults with an empty picker list. The user's pick is
