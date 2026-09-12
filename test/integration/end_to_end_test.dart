@@ -357,6 +357,85 @@ void main() {
     );
   });
 
+  test('awkward file names still convert correctly', () async {
+    final String content =
+        File(p.join('test', 'fixtures', 'srt', 'basic.srt')).readAsStringSync();
+    final AppController controller = controllerFor(target: SubtitleFormat.vtt);
+
+    // Uppercase extension, spaces, non-ASCII characters, and multiple dots.
+    final List<File> sources = <File>[
+      writeText('EPISODE 01.SRT', content),
+      writeText('第01話 日本語 字幕.srt', content),
+      writeText('show.s01e01.en.srt', content),
+    ];
+    await controller.addPaths(sources.map((File file) => file.path).toList());
+    await settleInspection(controller);
+
+    expect(
+      controller.entries.every(
+        (SubtitleFileEntry entry) => entry.detectedFormat == SubtitleFormat.srt,
+      ),
+      isTrue,
+      reason: controller.entries
+          .map((SubtitleFileEntry e) => '${e.fileName}: ${e.detectedFormat}')
+          .join(', '),
+    );
+
+    await controller.convertAll();
+    expect(controller.failureCount, 0);
+    expect(controller.successCount, 3);
+
+    expect(File(p.join(workspace.path, 'EPISODE 01.vtt')).existsSync(), isTrue);
+    expect(
+      File(p.join(workspace.path, '第01話 日本語 字幕.vtt')).existsSync(),
+      isTrue,
+    );
+    expect(
+      File(p.join(workspace.path, 'show.s01e01.en.vtt')).existsSync(),
+      isTrue,
+    );
+  });
+
+  test('an extensionless file is identified from its content alone', () async {
+    // Detection is content-first, so a missing extension is not fatal.
+    final File extensionless = writeText(
+      'subtitles',
+      File(p.join('test', 'fixtures', 'srt', 'basic.srt')).readAsStringSync(),
+    );
+    final AppController controller = controllerFor(target: SubtitleFormat.vtt);
+    await controller.addPaths(<String>[extensionless.path]);
+    await settleInspection(controller);
+
+    expect(controller.entries.single.detectedFormat, SubtitleFormat.srt);
+    expect(
+      controller.entries.single.detection!.isContentBased,
+      isTrue,
+      reason: 'the format must come from the content, not the name',
+    );
+
+    await controller.convertAll();
+    expect(controller.successCount, 1);
+    expect(
+      File(p.join(workspace.path, 'subtitles.vtt')).existsSync(),
+      isTrue,
+    );
+  });
+
+  test('a file with no usable content or extension is unsupported', () async {
+    final File notes = writeText('notes', 'a plain text file, not subtitles\n');
+    final AppController controller = controllerFor(target: SubtitleFormat.vtt);
+    await controller.addPaths(<String>[notes.path]);
+    await settleInspection(controller);
+    expect(controller.entries.single.detectedFormat, isNull);
+
+    await controller.convertAll();
+    expect(controller.failureCount, 1);
+    expect(
+      controller.entries.single.result!.failure,
+      ConversionFailure.unsupportedFormat,
+    );
+  });
+
   test('every fixture format converts to every other format on disk', () async {
     final Map<SubtitleFormat, String> fixtures = <SubtitleFormat, String>{
       SubtitleFormat.srt: 'basic.srt',
