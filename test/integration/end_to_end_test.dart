@@ -109,6 +109,45 @@ void main() {
     );
   });
 
+  test('dropping a folder picks up its subtitles and leaves the audio alone',
+      () async {
+    copyFixture('vtt', 'basic.vtt');
+    copyFixture('ass', 'basic.ass');
+    final File audio = File(p.join(workspace.path, 'episode.mp3'))
+      ..writeAsBytesSync(<int>[0x49, 0x44, 0x33]);
+    final File fixtureSrt = File(p.join('test', 'fixtures', 'srt', 'basic.srt'));
+    final Directory nested = Directory(p.join(workspace.path, 'extras'))
+      ..createSync();
+    final File nestedSrt = File(p.join(nested.path, 'basic.srt'))
+      ..writeAsBytesSync(fixtureSrt.readAsBytesSync());
+
+    final AppController controller = controllerFor(target: SubtitleFormat.srt);
+    await controller.addPaths(<String>[workspace.path]);
+    await settleInspection(controller);
+
+    // Only the folder's own subtitle files: no audio, no nested folder.
+    expect(
+      controller.entries.map((SubtitleFileEntry e) => e.fileName).toList(),
+      <String>['basic.ass', 'basic.vtt'],
+    );
+    expect(audio.existsSync(), isTrue);
+
+    await controller.convertAll();
+
+    expect(controller.successCount, 2);
+    expect(controller.failureCount, 0);
+    expect(
+      File(p.join(workspace.path, 'basic.srt')).existsSync(),
+      isTrue,
+      reason: 'the output lands in the folder the drop came from',
+    );
+    expect(
+      nestedSrt.readAsBytesSync(),
+      fixtureSrt.readAsBytesSync(),
+      reason: 'a nested folder is not part of a one-level scan',
+    );
+  });
+
   test('a GBK source converts to readable Chinese', () async {
     // Chinese subtitle encoded as GBK, which must be detected, not mojibake.
     final File gbk = writeText(

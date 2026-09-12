@@ -27,7 +27,7 @@ void main() {
 
     await pumpHomeScreen(tester, controller);
 
-    expect(find.text('Drag subtitle files here'), findsOneWidget);
+    expect(find.text('Drag subtitle files or a folder here'), findsOneWidget);
     expect(find.text('or click Add files to choose them'), findsOneWidget);
     expect(find.text('No files'), findsOneWidget);
   });

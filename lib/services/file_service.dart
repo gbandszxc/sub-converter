@@ -42,7 +42,8 @@ typedef ConversionProgressCallback = void Function(
   ConversionResult result,
 );
 
-/// Reads, decodes, detects, converts and writes subtitle files.
+/// Reads, decodes, detects, converts and writes subtitle files, and resolves
+/// dropped folders down to the subtitle files they hold.
 ///
 /// This is the only service that touches the file system. Each file is handled
 /// independently, so one failure can never abort a batch: the failure is
@@ -68,6 +69,76 @@ class FileService {
   final SubtitleConverter converter;
   final FormatDetector detector;
   final OutputPathResolver pathResolver;
+
+  /// Expands a mixed list of file and folder paths into subtitle file paths.
+  ///
+  /// A file path passes through unchanged, so an unrecognized one still becomes
+  /// a row and conversion reports the real error. A folder that exists is
+  /// scanned one level deep and yields its direct files whose name carries a
+  /// registered subtitle extension (the registry's lookup, so aliases such as
+  /// `.subrip` count); nested folders are not descended into, because reading
+  /// every file of a media library just to list it would be wasteful.
+  ///
+  /// The result keeps the input order, with each folder's files sorted by file
+  /// name so the list is stable across the order the OS happens to return. A
+  /// folder that holds nothing recognizable — or that cannot be listed —
+  /// contributes nothing rather than failing the whole drop.
+  Future<List<String>> expandPaths(Iterable<String> paths) async {
+    final List<String> expanded = <String>[];
+    for (final String raw in paths) {
+      final String path = raw.trim();
+      if (path.isEmpty) {
+        continue;
+      }
+      if (await _isDirectory(path)) {
+        expanded.addAll(await _subtitleFilesIn(path));
+      } else {
+        expanded.add(path);
+      }
+    }
+    return expanded;
+  }
+
+  /// True when [path] names an existing folder. A path that is missing, names a
+  /// file, or cannot be inspected at all is not a folder.
+  static Future<bool> _isDirectory(String path) async {
+    try {
+      return await Directory(path).exists();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Direct subtitle files inside [directory], sorted by file name.
+  ///
+  /// Only the folder's own entries are read; an unreadable folder yields
+  /// whatever it listed before the error instead of throwing.
+  Future<List<String>> _subtitleFilesIn(String directory) async {
+    final List<String> matches = <String>[];
+    try {
+      await for (final FileSystemEntity entity in Directory(directory).list()) {
+        if (entity is! File) {
+          continue;
+        }
+        if (registry.descriptorForExtension(entity.path) == null) {
+          continue;
+        }
+        matches.add(entity.path);
+      }
+    } catch (_) {
+      // An unreadable folder contributes the entries it managed to list.
+    }
+    matches.sort(_byFileName);
+    return matches;
+  }
+
+  /// Case-insensitive file-name order with the full path as tiebreaker, so the
+  /// order does not depend on how the OS enumerates a folder.
+  static int _byFileName(String a, String b) {
+    final int byName =
+        p.basename(a).toLowerCase().compareTo(p.basename(b).toLowerCase());
+    return byName != 0 ? byName : a.compareTo(b);
+  }
 
   /// Reads and identifies [sourcePath] without converting it.
   ///

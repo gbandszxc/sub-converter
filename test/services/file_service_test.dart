@@ -110,6 +110,82 @@ void main() {
     });
   });
 
+  group('expandPaths', () {
+    test('turns a folder into its subtitle files and skips other media',
+        () async {
+      writeSource('E02.ass');
+      writeSource('E01.vtt');
+      writeSource('episode.mp3', bytes: <int>[0x49, 0x44, 0x33]);
+      writeSource('cover.jpg', bytes: <int>[0xff, 0xd8]);
+
+      final List<String> paths = await service.expandPaths(<String>[
+        workspace.path,
+      ]);
+
+      expect(paths.map(p.basename).toList(), <String>['E01.vtt', 'E02.ass']);
+    });
+
+    test('does not descend into nested folders', () async {
+      writeSource('E01.srt');
+      final Directory nested = Directory(p.join(workspace.path, 'Season 2'))
+        ..createSync();
+      File(p.join(nested.path, 'E02.srt')).writeAsStringSync(sampleSrt);
+
+      final List<String> paths = await service.expandPaths(<String>[
+        workspace.path,
+      ]);
+
+      expect(paths.map(p.basename).toList(), <String>['E01.srt']);
+    });
+
+    test('recognizes the registered extension aliases', () async {
+      writeSource('a.subrip');
+      writeSource('b.webvtt');
+      writeSource('c.advancedsubstation');
+      writeSource('d.txt');
+
+      final List<String> paths = await service.expandPaths(<String>[
+        workspace.path,
+      ]);
+
+      expect(paths.map(p.basename).toList(), <String>[
+        'a.subrip',
+        'b.webvtt',
+        'c.advancedsubstation',
+      ]);
+    });
+
+    test('passes file paths through unchanged, unknown formats included',
+        () async {
+      final File source = writeSource('E01.srt');
+      final String unknown = p.join(workspace.path, 'movie.mkv');
+
+      final List<String> paths = await service.expandPaths(<String>[
+        source.path,
+        '  ${source.path}  ',
+        unknown,
+      ]);
+
+      expect(paths, <String>[source.path, source.path, unknown]);
+    });
+
+    test('folders with nothing to show contribute nothing, nor do blanks',
+        () async {
+      writeSource('episode.mp3', bytes: <int>[0x49, 0x44, 0x33]);
+      final Directory nested = Directory(p.join(workspace.path, 'Sub'))
+        ..createSync();
+      File(p.join(nested.path, 'E02.srt')).writeAsStringSync(sampleSrt);
+
+      final List<String> paths = await service.expandPaths(<String>[
+        '',
+        '   ',
+        workspace.path,
+      ]);
+
+      expect(paths, isEmpty);
+    });
+  });
+
   group('convertFile', () {
     test('writes next to the source by default and never touches it', () async {
       final File source = writeSource('E01.srt');

@@ -35,6 +35,28 @@ void main() {
       expect(controller.entries.last.detectedFormat, SubtitleFormat.ass);
     });
 
+    test('a folder path expands into the subtitle files it holds', () async {
+      final AppController controller = testController(
+        fileService: FakeFileService(
+          expandHandler: (List<String> paths) async => <String>[
+            for (final String path in paths)
+              if (path == '/movies/Season 1')
+                '/movies/Season 1/E01.vtt'
+              else
+                path,
+          ],
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.addPaths(<String>['/movies/Season 1', '/movies/b.ass']);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.fileCount, 2);
+      expect(controller.entries.first.path, '/movies/Season 1/E01.vtt');
+      expect(controller.entries.last.path, '/movies/b.ass');
+    });
+
     test('duplicate paths are ignored', () async {
       final AppController controller = testController();
       addTearDown(controller.dispose);

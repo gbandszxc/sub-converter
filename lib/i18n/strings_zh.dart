@@ -100,7 +100,7 @@ class AppStringsZh extends AppStrings {
   String convertWithCount(int count) => '转换 $count 个文件';
 
   @override
-  String get emptyTitle => '把字幕文件拖到这里';
+  String get emptyTitle => '把字幕文件或文件夹拖到这里';
 
   @override
   String get emptySubtitle => '或点击「添加文件」选择文件';

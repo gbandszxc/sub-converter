@@ -81,16 +81,37 @@ ConversionResult failureResult(
 
 /// Test double for [FileService] that never touches the file system.
 class FakeFileService extends FileService {
-  FakeFileService({this.inspectHandler, this.convertBuilder});
+  FakeFileService({
+    this.inspectHandler,
+    this.convertBuilder,
+    this.expandHandler,
+  });
 
   final Future<FileInspection> Function(String path)? inspectHandler;
   final ConversionResult Function(String path, ConversionOptions options)?
   convertBuilder;
 
+  /// Fakes folder expansion. Without it, paths pass through the way files do,
+  /// so the double never stats the disk.
+  final Future<List<String>> Function(List<String> paths)? expandHandler;
+
   /// Paths passed to the most recent [convertAll] call.
   List<String> lastConvertedPaths = const <String>[];
 
   ConversionOptions? lastOptions;
+
+  @override
+  Future<List<String>> expandPaths(Iterable<String> paths) {
+    final List<String> input = paths
+        .map((String path) => path.trim())
+        .where((String path) => path.isNotEmpty)
+        .toList();
+    final Future<List<String>> Function(List<String>)? handler = expandHandler;
+    if (handler != null) {
+      return handler(input);
+    }
+    return Future<List<String>>.value(input);
+  }
 
   @override
   Future<FileInspection> inspect(String sourcePath) {

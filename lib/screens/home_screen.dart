@@ -101,8 +101,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onDropDone(DropDoneDetails details) {
     _setDragging(false);
+    // No directory check here: on Windows the plugin reports a dropped folder
+    // as a plain path, so the controller tells a folder from a file by asking
+    // the file system (see FileService.expandPaths).
     final Iterable<String> paths = details.files
-        .where((DropItem item) => item is! DropItemDirectory)
         .map((DropItem item) => item.path)
         .where((String path) => path.isNotEmpty);
     _controller.addPaths(paths);

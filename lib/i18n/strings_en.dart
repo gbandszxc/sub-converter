@@ -105,7 +105,7 @@ class AppStringsEn extends AppStrings {
       'Convert $count ${count == 1 ? 'file' : 'files'}';
 
   @override
-  String get emptyTitle => 'Drag subtitle files here';
+  String get emptyTitle => 'Drag subtitle files or a folder here';
 
   @override
   String get emptySubtitle => 'or click Add files to choose them';

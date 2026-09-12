@@ -36,7 +36,7 @@ void main() {
     addTearDown(controller.dispose);
     await pumpHomeScreen(tester, controller);
 
-    expect(find.text('Drag subtitle files here'), findsOneWidget);
+    expect(find.text('Drag subtitle files or a folder here'), findsOneWidget);
 
     dropTarget(tester).onDragDone!(
       dropOf(<DropItem>[DropItemFile('/movies/E01.ass')]),
@@ -47,7 +47,7 @@ void main() {
     expect(controller.entries.single.path, '/movies/E01.ass');
     expect(find.text('E01.ass'), findsOneWidget);
     expect(find.text('1 file'), findsOneWidget);
-    expect(find.text('Drag subtitle files here'), findsNothing);
+    expect(find.text('Drag subtitle files or a folder here'), findsNothing);
   });
 
   testWidgets('several files drop in at once', (WidgetTester tester) async {
@@ -69,11 +69,24 @@ void main() {
     expect(find.text('3 files'), findsOneWidget);
   });
 
-  testWidgets('dropped directories and empty paths are ignored', (
+  testWidgets('a dropped folder becomes the subtitle files inside it', (
     WidgetTester tester,
   ) async {
     await useDesktopWindow(tester);
-    final AppController controller = testController();
+    final AppController controller = testController(
+      fileService: FakeFileService(
+        expandHandler: (List<String> paths) async => <String>[
+          for (final String path in paths)
+            if (path == '/movies/Season 1')
+              ...<String>[
+                '/movies/Season 1/E01.vtt',
+                '/movies/Season 1/E02.vtt',
+              ]
+            else
+              path,
+        ],
+      ),
+    );
     addTearDown(controller.dispose);
     await pumpHomeScreen(tester, controller);
 
@@ -81,13 +94,45 @@ void main() {
       dropOf(<DropItem>[
         DropItemDirectory('/movies/Season 1', <DropItem>[]),
         DropItemFile(''),
-        DropItemFile('/movies/E01.srt'),
       ]),
     );
     await tester.pumpAndSettle();
 
+    expect(controller.fileCount, 2);
+    expect(
+      controller.entries.map((SubtitleFileEntry e) => e.fileName).toList(),
+      <String>['E01.vtt', 'E02.vtt'],
+    );
+    expect(find.text('2 files'), findsOneWidget);
+  });
+
+  testWidgets('a folder the platform reports as a plain path still expands', (
+    WidgetTester tester,
+  ) async {
+    // Windows hands a dropped folder over as a DropItemFile, so the drop
+    // handler must not rely on the item type to recognize one.
+    await useDesktopWindow(tester);
+    final AppController controller = testController(
+      fileService: FakeFileService(
+        expandHandler: (List<String> paths) async => <String>[
+          for (final String path in paths)
+            if (path == '/movies/Season 2')
+              '/movies/Season 2/E01.srt'
+            else
+              path,
+        ],
+      ),
+    );
+    addTearDown(controller.dispose);
+    await pumpHomeScreen(tester, controller);
+
+    dropTarget(tester).onDragDone!(
+      dropOf(<DropItem>[DropItemFile('/movies/Season 2')]),
+    );
+    await tester.pumpAndSettle();
+
     expect(controller.fileCount, 1);
-    expect(controller.entries.single.path, '/movies/E01.srt');
+    expect(controller.entries.single.fileName, 'E01.srt');
   });
 
   testWidgets('dropping the same file twice keeps one row', (
@@ -127,7 +172,7 @@ void main() {
     target.onDragExited!(dragAt());
     await tester.pumpAndSettle();
     expect(controller.fileCount, 0);
-    expect(find.text('Drag subtitle files here'), findsOneWidget);
+    expect(find.text('Drag subtitle files or a folder here'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
