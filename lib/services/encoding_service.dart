@@ -101,21 +101,22 @@ class EncodingService {
       return bom;
     }
 
-    // BOM-less UTF-16 guess.
+    // Strict UTF-8, tried before any heuristic. Text that decodes cleanly as
+    // UTF-8 is UTF-8; the NUL check keeps a UTF-16 file (whose ASCII bytes are
+    // technically valid UTF-8) from being mistaken for one.
+    try {
+      final String text = utf8.decode(bytes);
+      if (!text.contains('\u0000')) {
+        return DecodedText(text: text, encodingName: 'UTF-8', hadBom: false);
+      }
+    } on FormatException {
+      // Not valid UTF-8; keep going.
+    }
+
+    // BOM-less UTF-16 guess, for files whose bytes are not valid UTF-8.
     final utf16 = _guessBomLessUtf16(bytes);
     if (utf16 != null) {
       return utf16;
-    }
-
-    // Strict UTF-8. Pure ASCII lands here.
-    try {
-      return DecodedText(
-        text: utf8.decode(bytes),
-        encodingName: 'UTF-8',
-        hadBom: false,
-      );
-    } on FormatException {
-      // Not valid UTF-8; keep going.
     }
 
     // Scored legacy candidates, in fixed candidate order.
@@ -257,7 +258,12 @@ class EncodingService {
       }
     }
 
-    if (zeros >= 4) {
+    // ASCII text stored as UTF-16 puts a NUL at every other byte. Requiring
+    // all NULs to sit on one side is a strong signal, so two are enough and a
+    // short file is still recognised; binary noise fails the plausibility check
+    // below and falls through to the legacy candidates.
+    final bool consistentParity = evenZeros == 0 || oddZeros == 0;
+    if (zeros >= 2 && consistentParity) {
       final littleEndian = oddZeros > evenZeros;
       final text = _decodeUtf16(bytes, littleEndian: littleEndian);
       if (!_isAcceptableUtf16(text)) {
