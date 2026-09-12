@@ -32,7 +32,8 @@ flutter pub get
 flutter run -d windows     # or: -d macos, -d linux
 ```
 
-Add files by dragging them onto the window, pressing `Ctrl+O`, or using the Add button.
+Add files by dragging them onto the window — dropping a folder adds the subtitle files it contains
+one level deep — pressing `Ctrl+O`, or using the Add button.
 `Ctrl+Enter` starts the batch. On startup the app restores the options you used last time.
 
 ### Build a release binary
@@ -155,14 +156,14 @@ valid UTF-8. Detection failures are reported per file rather than guessed throug
 flutter test
 ```
 
-The suite currently contains **360 tests, all passing**. Coverage:
+The suite currently contains **369 tests, all passing**. Coverage:
 
 - **Core**: timestamp parse/format rules, the unified model (`SubtitleDocument`/`SubtitleCue`), and the shared inline-markup scanner.
 - **Formats**: dedicated parser/writer tests for each of SRT, VTT, LRC, ASS, SSA and SBV, exercised against real fixtures (including CJK and tag-heavy files).
 - **Conversion matrix**: a generated 6x6 test that converts every fixture to every format, re-parses the output with the target's own parser and checks cue count and start-time drift.
 - **Encoding**: BOM handling, UTF-16/UTF-32 detection, ASCII/CJK/SJIS/GBK/GB18030 cases, Windows-1252 fallback and failure behavior.
 - **Path and file safety**: conflict policies and the "never overwrite the source" rule; batch conversion, progress and per-file failures.
-- **UI/controller**: `AppController` state and persistence, widget tests for the home screen, the language and font pickers, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, dropped folders and empty paths ignored, duplicates collapsed).
+- **UI/controller**: `AppController` state and persistence, widget tests for the home screen, the language and font pickers, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, a dropped folder expanded to the subtitle files inside it, empty paths ignored, duplicates collapsed).
 - **App font**: per-platform default families, desktop overrides, fallback chains, persistence, and the picker's behavior with fonts that are not installed.
 - **End to end**: the real `FileService` and `AppController` against real files on disk, including the full all-format matrix.
 
@@ -179,9 +180,11 @@ release build, and then **launches the built artifact and asserts it stays alive
 | macOS | `macos-latest` | 346 passed | `Subtitle Converter.app` (45.4 MB) | yes, alive after 12s |
 | Linux | `ubuntu-latest` | 346 passed | `sub_converter` bundle | yes, alive for 15s |
 
-Last verified on commit `480c053`, CI run 34697190030, all three jobs green. The Linux
-job launches under `Xvfb` with `LIBGL_ALWAYS_SOFTWARE=1`, since a headless runner has
-neither a display nor a GPU.
+Last fully CI-verified on commit `480c053`, CI run 34697190030, all three jobs green
+(346 tests). The system-font feature commits are additionally verified on a real Windows
+machine (release build, MSI install, live UI); the table above refreshes to their counts
+once CI runs on the latest commit. The Linux job launches under `Xvfb` with
+`LIBGL_ALWAYS_SOFTWARE=1`, since a headless runner has neither a display nor a GPU.
 
 One behaviour is intentionally platform-dependent, and CI is what surfaced it: duplicate
 detection compares paths case-insensitively **only on Windows**, where the file system

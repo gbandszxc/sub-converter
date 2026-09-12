@@ -111,6 +111,31 @@ void main() {
   });
 
   group('font picker in the options panel', () {
+    testWidgets('dropdown values render at the regular weight', (
+      WidgetTester tester,
+    ) async {
+      await useDesktopWindow(tester);
+      tester.platformDispatcher.localeTestValue = const Locale('en', 'US');
+      addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+      final AppController controller = testController(
+        systemFonts: systemFonts,
+        platformName: 'windows',
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(SubtitleConverterApp(controller: controller));
+      await tester.pumpAndSettle();
+
+      // DropdownButton styles its closed value with titleMedium, whose
+      // Material default is w500. CJK UI fonts rarely ship a 500 face, so the
+      // theme must pin the regular weight or every dropdown value renders in
+      // Bold next to regular text.
+      final ThemeData theme = currentTheme(tester);
+      expect(theme.textTheme.titleMedium!.fontWeight, FontWeight.w400);
+      expect(theme.textTheme.titleMedium!.fontSize, 13);
+      expect(theme.textTheme.titleMedium!.fontFamily, 'Default UI');
+    });
+
     testWidgets('picks a font, renders it, and shows the system default',
         (WidgetTester tester) async {
       await useDesktopWindow(tester);

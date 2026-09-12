@@ -16,7 +16,7 @@
 ```bash
 flutter pub get
 flutter analyze                  # 必须 "No issues found!"（0 issue）
-flutter test                     # 必须全绿；当前 368 个测试
+flutter test                     # 必须全绿；当前 369 个测试
 flutter build windows --release  # 产物 build\windows\x64\runner\Release\
 flutter build macos   --release
 flutter build linux   --release
@@ -109,7 +109,7 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 
 ```bash
 flutter analyze   # 0 issue
-flutter test      # 全绿（当前 368）
+flutter test      # 全绿（当前 369）
 ```
 
 - [ ] 若改动用户可见行为 → 更新两份 README；涉及打包 → 更新 `packaging/msi/README.md`

@@ -85,6 +85,12 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
     TextTheme textTheme = const TextTheme(
       bodyMedium: TextStyle(fontSize: 13),
       bodySmall: TextStyle(fontSize: 12),
+      // DropdownButton renders its closed value in titleMedium, whose Material
+      // default is w500. CJK UI fonts rarely ship a 500 face, so DirectWrite
+      // jumps to Bold for those runs while the surrounding text stays regular
+      // - the uneven weights this app must never show. Pin it to the regular
+      // weight and the body size.
+      titleMedium: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
     );
     if (family != null) {
       textTheme = textTheme.apply(

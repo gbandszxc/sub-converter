@@ -30,8 +30,8 @@ flutter pub get
 flutter run -d windows     # 或 -d macos / -d linux
 ```
 
-拖拽文件到窗口、按 `Ctrl+O`、或点「Add files」按钮添加字幕；`Ctrl+Enter` 开始批量转换。
-启动时会恢复上次使用的选项。
+拖拽文件到窗口（拖入文件夹会加入其中一级的所有字幕文件）、按 `Ctrl+O`、或点「Add files」按钮添加字幕；
+`Ctrl+Enter` 开始批量转换。启动时会恢复上次使用的选项。
 
 ### 构建发布版
 
@@ -142,14 +142,14 @@ UTF-8，否则按 Windows-1252 读取。检测失败会按文件报错，而不�
 flutter test
 ```
 
-当前共 **360 个测试，全部通过**。覆盖范围：
+当前共 **369 个测试，全部通过**。覆盖范围：
 
 - **核心**：时间戳解析/格式化规则、统一模型（`SubtitleDocument`/`SubtitleCue`）、共享的行内标记扫描器。
 - **各格式**：SRT、VTT、LRC、ASS、SSA、SBV 各自独立的 parser/writer 测试，使用真实 fixture（含中日文与含标签的文件）。
 - **转换矩阵**：自动生成的 6x6 测试，把每个 fixture 转成每种格式，再用目标格式自己的 parser 回读，校验 cue 数量与起始时间漂移。
 - **编码**：BOM 处理、UTF-16/UTF-32 检测、ASCII/中日文/SJIS/GBK/GB18030 用例、Windows-1252 兜底与失败行为。
 - **路径与文件安全**：冲突策略与「绝不覆盖源文件」规则；批量转换、进度与单文件失败。
-- **UI/控制器**：`AppController` 状态与持久化、主界面 widget 测试、界面语言与字体下拉，以及直接驱动窗口真实 `DropTarget` 回调的拖放测试（多文件拖入、忽略拖入的目录与空路径、重复项合并）。
+- **UI/控制器**：`AppController` 状态与持久化、主界面 widget 测试、界面语言与字体下拉，以及直接驱动窗口真实 `DropTarget` 回调的拖放测试（多文件拖入、拖入的文件夹展开为其中一级的字幕文件、空路径忽略、重复项合并）。
 - **应用字体**：各平台默认字体、桌面字体覆盖、回退链、持久化，以及字体未安装时选择器的行为。
 - **端到端**：用真实 `FileService` 与 `AppController` 操作磁盘上的真实文件，含完整的全格式矩阵。
 
@@ -165,7 +165,9 @@ flutter test
 | macOS | `macos-latest` | 346 通过 | `Subtitle Converter.app`（45.4 MB） | 是，12 秒后仍存活 |
 | Linux | `ubuntu-latest` | 346 通过 | `sub_converter` bundle | 是，15 秒后仍存活 |
 
-最近一次验证：commit `480c053`，CI run 34697190030，三个 job 全绿。Linux job 在 `Xvfb` 下以
+最近一次完整 CI 验证：commit `480c053`，CI run 34697190030，三个 job 全绿（346 个测试）。
+系统字体相关的提交另在真实 Windows 机器上验证过（release 构建、MSI 安装、实机 UI 操作）；
+推送最新提交、CI 跑完后，上表数字会刷新为当时的测试数。Linux job 在 `Xvfb` 下以
 `LIBGL_ALWAYS_SOFTWARE=1` 启动，因为无头 runner 既没有显示器也没有 GPU。
 
 有一处行为是**有意按平台区分**的，而且正是 CI 把它暴露出来的：路径去重**只在 Windows** 上
