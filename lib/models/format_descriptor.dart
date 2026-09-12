@@ -55,12 +55,23 @@ class FormatDescriptor {
   /// Canonical extension without a leading dot.
   String get extension => format.extension;
 
-  /// True when [extension] (with or without dot) belongs to this format.
+  /// True when [candidate] names this format's extension.
+  ///
+  /// Accepts a bare extension (`srt`, `.SRT`) or a full file name or path
+  /// (`movie.en.srt`, `D:\Anime\E01.ass`).
   bool matchesExtension(String candidate) {
-    final String normalized = candidate
-        .trim()
-        .toLowerCase()
-        .replaceFirst(RegExp(r'^\.'), '');
+    String normalized = candidate.trim().toLowerCase().replaceAll('\\', '/');
+    final int separator = normalized.lastIndexOf('/');
+    if (separator >= 0) {
+      normalized = normalized.substring(separator + 1);
+    }
+    final int lastDot = normalized.lastIndexOf('.');
+    if (lastDot >= 0) {
+      normalized = normalized.substring(lastDot + 1);
+    }
+    if (normalized.isEmpty) {
+      return false;
+    }
     return normalized == extension || extensionAliases.contains(normalized);
   }
 
