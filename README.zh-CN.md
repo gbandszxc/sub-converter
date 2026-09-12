@@ -98,10 +98,19 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 | 时间偏移 | 带符号毫秒（可输入，或用 ±500 ms 步进，可重置） | 0 ms |
 | 写入 UTF-8 BOM | 开 / 关 | 关 |
 | 界面语言 | 跟随系统、English、简体中文 | 跟随系统 |
+| 字体 | 跟随系统，或任意已安装字体 | 跟随系统 |
 
 时间统一平移并在 0 处截断，因此负偏移不会产生负时间戳。覆盖策略会替换已存在的**输出**文件，
-但仍拒绝替换源文件。设置项（目标格式、输出位置、指定目录、冲突策略、偏移、BOM）通过
-`shared_preferences` 持久化，下次启动恢复。
+但仍拒绝替换源文件。设置项（目标格式、输出位置、指定目录、冲突策略、偏移、BOM、界面语言、
+字体）通过 `shared_preferences` 持久化，下次启动恢复。
+
+### 字体
+
+应用默认使用各系统自己的界面字体——Windows 微软雅黑（YaHei UI）、macOS 苹方（PingFang）、
+Linux 桌面环境当前选中的字体——而不是依赖引擎自带的字体回退，后者渲染中文时粗细不均。即便所
+选字体缺字，CJK 回退链仍能兜底。选项面板中的「字体」下拉列出系统已安装字体（每项都以自身字
+体预览）；选择会持久化。若所选字体之后被卸载（或在别的机器上不存在），界面回退到标准回退字体，
+不会报错。
 
 ## 字符编码支持
 
@@ -133,14 +142,15 @@ UTF-8，否则按 Windows-1252 读取。检测失败会按文件报错，而不�
 flutter test
 ```
 
-当前共 **346 个测试，全部通过**。覆盖范围：
+当前共 **360 个测试，全部通过**。覆盖范围：
 
 - **核心**：时间戳解析/格式化规则、统一模型（`SubtitleDocument`/`SubtitleCue`）、共享的行内标记扫描器。
 - **各格式**：SRT、VTT、LRC、ASS、SSA、SBV 各自独立的 parser/writer 测试，使用真实 fixture（含中日文与含标签的文件）。
 - **转换矩阵**：自动生成的 6x6 测试，把每个 fixture 转成每种格式，再用目标格式自己的 parser 回读，校验 cue 数量与起始时间漂移。
 - **编码**：BOM 处理、UTF-16/UTF-32 检测、ASCII/中日文/SJIS/GBK/GB18030 用例、Windows-1252 兜底与失败行为。
 - **路径与文件安全**：冲突策略与「绝不覆盖源文件」规则；批量转换、进度与单文件失败。
-- **UI/控制器**：`AppController` 状态与持久化、主界面 widget 测试，以及直接驱动窗口真实 `DropTarget` 回调的拖放测试（多文件拖入、忽略拖入的目录与空路径、重复项合并）。
+- **UI/控制器**：`AppController` 状态与持久化、主界面 widget 测试、界面语言与字体下拉，以及直接驱动窗口真实 `DropTarget` 回调的拖放测试（多文件拖入、忽略拖入的目录与空路径、重复项合并）。
+- **应用字体**：各平台默认字体、桌面字体覆盖、回退链、持久化，以及字体未安装时选择器的行为。
 - **端到端**：用真实 `FileService` 与 `AppController` 操作磁盘上的真实文件，含完整的全格式矩阵。
 
 ## 跨平台验证
@@ -224,10 +234,12 @@ lib/
   widgets/                      头部、文件列表、选项面板、状态栏。
   i18n/                         文案表（en、zh）、AppLanguage，以及把文案交给
                                 widget 的 StringsScope。
+  platform/                     唯一的平台通道接缝：系统字体查询与各平台的
+                                字体策略。
   utils/                        时间戳、行内标记、默认值。
 test/
-  core/ formats/ services/ widget/ integration/
-                                单元、矩阵、路径、UI 与端到端测试。
+  core/ formats/ services/ platform/ widget/ integration/
+                                单元、矩阵、路径、字体策略、UI 与端到端测试。
   fixtures/                     各格式的真实样例文件。
 packaging/
   msi/                          Windows 安装包的 WiX v3 定义、构建脚本与资源；

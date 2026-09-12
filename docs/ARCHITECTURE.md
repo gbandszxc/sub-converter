@@ -54,6 +54,8 @@ UI            lib/screens/home_screen.dart, lib/widgets/*
   v
 AppController lib/screens/app_controller.dart        ChangeNotifier, all UI state
   |
+  +------------> lib/platform/*                        SystemFonts (one channel), AppTypography (pure)
+  |
   v
 Services      lib/services/*
               FileService          (the only IO)
@@ -78,6 +80,10 @@ Rules:
   network. They take and return `String` / `SubtitleDocument` and nothing else.
 - **`FileService` is the only service that touches disk.** Everything below it is synchronous
   and unit-testable without a temporary directory.
+- **`lib/platform` is the only platform-channel seam.** System fonts are asked over one method
+  channel (`sub_converter/fonts`) implemented in each runner; the typography *policy* stays
+  pure Dart (`AppTypography`). No Dart code outside `FileService` reads the file system, and
+  `lib/models`, `lib/formats` and `lib/services` keep zero Flutter imports.
 - **Dependencies point downward.** No service imports a screen; no parser imports a service.
 - **Only the UI knows the locale.** `lib/i18n` is imported by `lib/main.dart`, `lib/screens`
   and `lib/widgets` and by nothing below them. `lib/models`, `lib/formats` and
@@ -165,6 +171,8 @@ Adding a format starts here.
 | Output naming / conflict rules | `lib/services/output_path_resolver.dart` |
 | Batch orchestration and IO | `lib/services/file_service.dart` |
 | Persistence seam | `lib/services/settings_store.dart` |
+| App font policy (defaults, fallback chains) | `lib/platform/app_typography.dart` |
+| System font queries (installed list, desktop default) | `lib/platform/system_fonts.dart` plus each platform runner |
 | UI strings, language choice | `lib/i18n/` (`strings_en.dart`, `strings_zh.dart`, `app_strings.dart`, `app_language.dart`) |
 
 Shared code is factored so dialects and formats do not duplicate each other: `ass/` holds one
@@ -276,6 +284,35 @@ What is deliberately **not** localized: parser and service `detail` strings. Par
 locale-free (see the layering rules), so those messages remain English diagnostics. The row shows
 the localized reason plus the English detail only for the kinds that carry a path, and the paths
 themselves are language-neutral.
+
+## System fonts
+
+The app pins its text families instead of trusting the engine's runtime fallback, which renders
+CJK with uneven weights. The policy lives in `lib/platform/app_typography.dart` (pure data, no
+Flutter): a curated default per platform — Microsoft YaHei UI on Windows, PingFang SC on macOS,
+Noto Sans CJK SC on Linux — plus an ordered CJK-aware fallback chain that applies on top of
+whatever family is active, so a user-chosen font that lacks Chinese glyphs still renders them
+consistently.
+
+`lib/platform/system_fonts.dart` wraps the `sub_converter/fonts` method channel; each runner
+implements it natively:
+
+- **Windows** (`windows/runner/system_fonts.cpp`) — `EnumFontFamiliesExW` lists the installed
+  families (leading-`@` vertical variants dropped, duplicates merged case-insensitively); the
+  default family comes from `NONCLIENTMETRICS` `lfMessageFont`, i.e. the font the shell itself
+  uses ("Microsoft YaHei UI" on Chinese Windows, "Segoe UI" on English Windows, ...), so a
+  localized system gets its own UI face.
+- **macOS** (`macos/Runner/MainFlutterWindow.swift`) — `NSFontManager.availableFontFamilies`
+  lists; "PingFang SC" is reported as the default.
+- **Linux** (`linux/runner/my_application.cc`) — the realized window's Pango font map
+  (fontconfig) lists; the default family is the desktop's `gtk-font-name` setting (e.g.
+  "Cantarell 11" on GNOME) parsed to its family name via `PangoFontDescription`.
+
+Both queries degrade silently: if the channel is missing (widget tests, an unsupported host)
+the app falls back to the curated defaults with an empty picker list. The user's pick is
+persisted under the `fontFamily` settings key (`null` = follow system) and is not validated
+against the installed list — a font that later disappears, or that was chosen on another
+machine, keeps applying through the standard fallback.
 
 ## Deliberate v0.1 simplifications
 

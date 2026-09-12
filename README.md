@@ -105,11 +105,22 @@ when the only collision would be the source.
 | Time offset | Signed milliseconds (typed, or stepped by ±500 ms, with reset) | 0 ms |
 | Write UTF-8 BOM | On / off | Off |
 | Language | Follow system, English, 简体中文 | Follow system |
+| Font | Follow system, or any installed font family | Follow system |
 
 Times are shifted uniformly and clamped at zero, so a negative offset never produces a negative
 timestamp. The overwrite policy replaces an existing *output* file but still refuses to replace
 the source. Settings (target format, output location, chosen folder, conflict policy, offset,
-BOM) are persisted with `shared_preferences` and restored between runs.
+BOM, language, font) are persisted with `shared_preferences` and restored between runs.
+
+### Fonts
+
+The app renders in each system's own UI font by default — Microsoft YaHei UI on Windows,
+PingFang on macOS, and the desktop environment's selected font on Linux — instead of relying on
+the engine's font fallback, which renders CJK with uneven weights. A CJK-aware fallback chain
+still covers glyphs the chosen font lacks. The Font picker in the options panel lists the fonts
+installed on the system (each previewed in its own face); a pick is persisted, and a font that
+later disappears — or that was picked on another machine — keeps applying with the standard
+fallback instead of breaking.
 
 ## Encoding support
 
@@ -144,14 +155,15 @@ valid UTF-8. Detection failures are reported per file rather than guessed throug
 flutter test
 ```
 
-The suite currently contains **346 tests, all passing**. Coverage:
+The suite currently contains **360 tests, all passing**. Coverage:
 
 - **Core**: timestamp parse/format rules, the unified model (`SubtitleDocument`/`SubtitleCue`), and the shared inline-markup scanner.
 - **Formats**: dedicated parser/writer tests for each of SRT, VTT, LRC, ASS, SSA and SBV, exercised against real fixtures (including CJK and tag-heavy files).
 - **Conversion matrix**: a generated 6x6 test that converts every fixture to every format, re-parses the output with the target's own parser and checks cue count and start-time drift.
 - **Encoding**: BOM handling, UTF-16/UTF-32 detection, ASCII/CJK/SJIS/GBK/GB18030 cases, Windows-1252 fallback and failure behavior.
 - **Path and file safety**: conflict policies and the "never overwrite the source" rule; batch conversion, progress and per-file failures.
-- **UI/controller**: `AppController` state and persistence, widget tests for the home screen, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, dropped folders and empty paths ignored, duplicates collapsed).
+- **UI/controller**: `AppController` state and persistence, widget tests for the home screen, the language and font pickers, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, dropped folders and empty paths ignored, duplicates collapsed).
+- **App font**: per-platform default families, desktop overrides, fallback chains, persistence, and the picker's behavior with fonts that are not installed.
 - **End to end**: the real `FileService` and `AppController` against real files on disk, including the full all-format matrix.
 
 ## Cross-platform verification
@@ -236,10 +248,13 @@ lib/
   widgets/                      Header, file list, options panel, status bar.
   i18n/                         AppStrings tables (en, zh), AppLanguage and the
                                 StringsScope that hands them to the widgets.
+  platform/                     The one platform-channel seam: system font
+                                queries and the per-OS typography policy.
   utils/                        Timestamp, inline markup, defaults.
 test/
-  core/ formats/ services/ widget/ integration/
-                                Unit, matrix, path, UI and end-to-end tests.
+  core/ formats/ services/ platform/ widget/ integration/
+                                Unit, matrix, path, font policy, UI and
+                                end-to-end tests.
   fixtures/                     Real sample files per format.
 packaging/
   msi/                          WiX v3 definition, build script and assets for
