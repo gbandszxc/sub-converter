@@ -127,6 +127,7 @@ class ConversionResult {
     this.detail,
     this.detectedEncoding,
     this.warnings = const <String>[],
+    this.outputRenamed = false,
     this.cueCount = 0,
     this.elapsed = Duration.zero,
   });
@@ -141,6 +142,7 @@ class ConversionResult {
         detail = null,
         detectedEncoding = null,
         warnings = const <String>[],
+        outputRenamed = false,
         cueCount = 0,
         elapsed = Duration.zero;
 
@@ -160,8 +162,14 @@ class ConversionResult {
   /// Encoding the source file was decoded with, e.g. `GBK`.
   final String? detectedEncoding;
 
-  /// Non-fatal notes, e.g. dropped styling.
+  /// Non-fatal information loss, e.g. dropped styling. Only ever populated
+  /// with loss notes, so [isLossy] means what it says; file-level facts such as
+  /// a rename are reported separately.
   final List<String> warnings;
+
+  /// True when the output had to be given a numbered name because the plain
+  /// name was taken (or was the source file itself).
+  final bool outputRenamed;
 
   final int cueCount;
   final Duration elapsed;
@@ -198,6 +206,7 @@ class ConversionResult {
     String? detail,
     String? detectedEncoding,
     List<String>? warnings,
+    bool? outputRenamed,
     int? cueCount,
     Duration? elapsed,
   }) {
@@ -211,6 +220,7 @@ class ConversionResult {
       detail: detail ?? this.detail,
       detectedEncoding: detectedEncoding ?? this.detectedEncoding,
       warnings: warnings ?? this.warnings,
+      outputRenamed: outputRenamed ?? this.outputRenamed,
       cueCount: cueCount ?? this.cueCount,
       elapsed: elapsed ?? this.elapsed,
     );

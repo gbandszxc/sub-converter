@@ -146,7 +146,10 @@ class FileRow extends StatelessWidget {
       return detail == null || detail.isEmpty ? null : detail;
     }
     if (result.isSuccess && result.outputPath != null) {
-      return p.basename(result.outputPath!);
+      final String name = p.basename(result.outputPath!);
+      // A rename is not information loss, so it is a quiet note here rather
+      // than part of the lossy affordance.
+      return result.outputRenamed ? '$name  (renamed, name was taken)' : name;
     }
     return null;
   }

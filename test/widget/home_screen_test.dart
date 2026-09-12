@@ -119,6 +119,35 @@ void main() {
     expect(controller.lossyCount, 1);
   });
 
+  testWidgets('an auto-renamed success is not shown as lossy', (
+    WidgetTester tester,
+  ) async {
+    // Regression: the rename notice used to be mixed into the loss warnings,
+    // so a plain rename was reported as "some styling could not be
+    // represented".
+    await useDesktopWindow(tester);
+    final AppController controller = testController(
+      fileService: FakeFileService(
+        convertBuilder: (String path, ConversionOptions options) =>
+            successResult(path, options).copyWith(outputRenamed: true),
+      ),
+    );
+    addTearDown(controller.dispose);
+    await pumpHomeScreen(tester, controller);
+
+    await controller.addPaths(<String>['/movies/a.srt']);
+    await tester.pumpAndSettle();
+    await controller.convertAll();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text(lossyNotice), findsNothing);
+    expect(find.text('1 succeeded.'), findsOneWidget);
+    expect(controller.successCount, 1);
+    expect(controller.lossyCount, 0);
+    expect(find.textContaining('renamed, name was taken'), findsOneWidget);
+  });
+
   testWidgets('inspection failure shows Unknown without throwing', (
     WidgetTester tester,
   ) async {

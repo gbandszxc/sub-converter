@@ -145,12 +145,6 @@ class FileService {
       }
 
       final String outputPath = resolution.path!;
-      final List<String> warnings = <String>[
-        ...output.loss.warnings,
-        if (resolution.renamed)
-          'A file with that name already existed; wrote '
-              '${p.basename(outputPath)} instead.',
-      ];
 
       await _writeBytes(
         outputPath,
@@ -167,7 +161,8 @@ class FileService {
         targetFormat: options.targetFormat,
         outputPath: outputPath,
         detectedEncoding: decoded.encodingName,
-        warnings: warnings,
+        warnings: output.loss.warnings,
+        outputRenamed: resolution.renamed,
         cueCount: output.cueCount,
         elapsed: stopwatch.elapsed,
       );

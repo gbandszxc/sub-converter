@@ -137,7 +137,10 @@ void main() {
           await service.convertFile(source.path, options());
 
       expect(result.outputPath, p.join(workspace.path, 'E01 (1).vtt'));
-      expect(result.warnings.join(' '), contains('already existed'));
+      expect(result.outputRenamed, isTrue);
+      // A rename is not information loss, so it must not read as lossy.
+      expect(result.warnings, isEmpty);
+      expect(result.isLossy, isFalse);
       expect(existing.readAsStringSync(), 'do not touch');
     });
 
