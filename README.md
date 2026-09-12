@@ -1,5 +1,7 @@
 # Subtitle Converter
 
+**English** | [简体中文](README.zh-CN.md)
+
 A lightweight, fully offline desktop tool that converts text subtitle files between six
 formats (SRT, WebVTT, LRC, ASS, SSA and YouTube SBV). It is a plain Flutter desktop app:
 nothing is uploaded, there is no FFmpeg, Python or Node dependency, no network access and no
@@ -239,7 +241,15 @@ packaging/
                                 the Windows installer; see its own README.
 .github/workflows/ci.yml        Tests, release builds and launch checks on
                                 Windows, macOS and Linux.
+docs/ARCHITECTURE.md            Layering, data flow, model, extension points,
+                                loss policy and file-safety rules.
+AGENTS.md                       Dev conventions and the document index with
+                                maintenance triggers.
+README.zh-CN.md                 Chinese translation of this file.
 ```
+
+See [`AGENTS.md`](AGENTS.md) for the conventions and for when each document above must be
+updated.
 
 ## Privacy
 
