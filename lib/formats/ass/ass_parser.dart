@@ -22,6 +22,11 @@ import 'ass_text_codec.dart';
 ///   `Movie`, `Command`).
 /// * Every override command except bold/italic/underline/strikethrough,
 ///   `\r`, `\an` and `\pos` (see [AssTextCodec]).
+///
+/// Known limitation: the `Text` field must be last, which the ASS spec
+/// requires. A file that places another field after `Text` and also uses commas
+/// in its dialogue text cannot be split unambiguously, so it is reported as a
+/// syntax error rather than guessed at.
 class AssParser implements SubtitleParser {
   AssParser([this.dialect = AssDialect.ass]);
 

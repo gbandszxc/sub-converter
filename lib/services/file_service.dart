@@ -223,14 +223,26 @@ class FileService {
       return p.dirname(sourcePath);
     }
     final String directory = options.outputDirectory!.trim();
-    final Directory target = Directory(directory);
-    if (!await target.exists()) {
+    final String? problem = await _describeDirectoryProblem(directory);
+    if (problem != null) {
       throw SubtitleConversionException(
         ConversionFailure.targetPathUnavailable,
-        'The output folder does not exist: $directory',
+        problem,
       );
     }
     return directory;
+  }
+
+  /// Returns a user-facing description of why [path] is not a usable output
+  /// folder, or `null` when it is fine.
+  static Future<String?> _describeDirectoryProblem(String path) async {
+    if (await File(path).exists()) {
+      return 'The output path is a file, not a folder: $path';
+    }
+    if (!await Directory(path).exists()) {
+      return 'The output folder does not exist: $path';
+    }
+    return null;
   }
 
   Future<List<int>> _readBytes(String sourcePath) async {
@@ -245,11 +257,12 @@ class FileService {
   }
 
   Future<void> _writeBytes(String outputPath, List<int> bytes) async {
-    final Directory parent = File(outputPath).parent;
-    if (!await parent.exists()) {
+    final String? problem =
+        await _describeDirectoryProblem(File(outputPath).parent.path);
+    if (problem != null) {
       throw SubtitleConversionException(
         ConversionFailure.targetPathUnavailable,
-        'The output folder does not exist: ${parent.path}',
+        problem,
       );
     }
     await File(outputPath).writeAsBytes(bytes, flush: true);

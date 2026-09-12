@@ -279,6 +279,35 @@ void main() {
       expect(results, isEmpty);
     });
 
+    test('says so when the output path is a file, not a folder', () async {
+      final File source = writeSource('E01.srt');
+      final File notAFolder = File(p.join(workspace.path, 'not-a-folder'))
+        ..writeAsStringSync('I am a file');
+
+      final ConversionResult result = await service.convertFile(
+        source.path,
+        options(
+          location: OutputLocation.customDirectory,
+          directory: notAFolder.path,
+        ),
+      );
+      expect(result.isFailure, isTrue);
+      expect(result.failure, ConversionFailure.targetPathUnavailable);
+      expect(result.detail, contains('not a folder'));
+    });
+
+    test('an inverted cue still converts, with a warning', () async {
+      final File source = writeSource(
+        'backwards.srt',
+        content: '1\n00:00:05,000 --> 00:00:02,000\nbackwards\n',
+      );
+      final ConversionResult result =
+          await service.convertFile(source.path, options(target: SubtitleFormat.srt));
+      expect(result.isSuccess, isTrue);
+      expect(result.isLossy, isTrue);
+      expect(result.warnings.join(' '), contains('ends before it starts'));
+    });
+
     test('converts a batch into a custom folder', () async {
       final Directory out = Directory(p.join(workspace.path, 'out'))..createSync();
       final List<String> sources = <String>[

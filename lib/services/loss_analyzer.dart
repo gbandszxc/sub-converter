@@ -69,6 +69,20 @@ class LossAnalyzer {
       }
     }
 
+    // Source-side sanity, not a format limitation: an inverted interval is
+    // usually a typo. The file still converts, because dropping the whole file
+    // over one bad cue would lose far more than it protects.
+    final int inverted =
+        document.cues.where((SubtitleCue cue) => cue.isMalformed).length;
+    if (inverted > 0) {
+      warnings.add(
+        inverted == 1
+            ? '1 cue ends before it starts; its times were written unchanged.'
+            : '$inverted cues end before they start; their times were written '
+                'unchanged.',
+      );
+    }
+
     return warnings.isEmpty ? LossReport.none : LossReport(warnings);
   }
 }
