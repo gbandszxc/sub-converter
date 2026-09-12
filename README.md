@@ -119,7 +119,7 @@ valid UTF-8. Detection failures are reported per file rather than guessed throug
 flutter test
 ```
 
-The suite currently contains **330 tests, all passing**. Coverage:
+The suite currently contains **331 tests, all passing**. Coverage:
 
 - **Core**: timestamp parse/format rules, the unified model (`SubtitleDocument`/`SubtitleCue`), and the shared inline-markup scanner.
 - **Formats**: dedicated parser/writer tests for each of SRT, VTT, LRC, ASS, SSA and SBV, exercised against real fixtures (including CJK and tag-heavy files).
@@ -128,6 +128,28 @@ The suite currently contains **330 tests, all passing**. Coverage:
 - **Path and file safety**: conflict policies and the "never overwrite the source" rule; batch conversion, progress and per-file failures.
 - **UI/controller**: `AppController` state and persistence, widget tests for the home screen, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, dropped folders and empty paths ignored, duplicates collapsed).
 - **End to end**: the real `FileService` and `AppController` against real files on disk, including the full all-format matrix.
+
+## Cross-platform verification
+
+All three target operating systems are verified on real machines by
+`.github/workflows/ci.yml`. Each job runs `flutter analyze`, the full test suite, a
+release build, and then **launches the built artifact and asserts it stays alive**, so
+"it builds" is never mistaken for "it runs".
+
+| Target | Runner | Tests | Release build | Launches |
+| --- | --- | --- | --- | --- |
+| Windows | `windows-latest` | 331 passed | `sub_converter.exe` | yes, alive after 12s |
+| macOS | `macos-latest` | 331 passed | `Subtitle Converter.app` (45.4 MB) | yes, alive after 12s |
+| Linux | `ubuntu-latest` | 331 passed | `sub_converter` bundle | yes, alive for 15s |
+
+Last verified on commit `4d2c44a`, CI run 34693848998, all three jobs green. The Linux
+job launches under `Xvfb` with `LIBGL_ALWAYS_SOFTWARE=1`, since a headless runner has
+neither a display nor a GPU.
+
+One behaviour is intentionally platform-dependent, and CI is what surfaced it: duplicate
+detection compares paths case-insensitively **only on Windows**, where the file system
+is. On macOS and Linux, `A.srt` and `a.srt` are genuinely different files, so both stay
+in the list instead of one silently disappearing.
 
 ## Scope
 

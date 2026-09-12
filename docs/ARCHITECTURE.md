@@ -256,3 +256,8 @@ batch message.
   raw text and re-emitted only by the VTT writer; `supportsPositions` is false because they are
   not modelled as positions, so a conversion to another format drops them without a dedicated
   positioning warning.
+- **Path comparison is case-insensitive only on Windows.** `AppController` lowercases its
+  duplicate-detection key when `Platform.isWindows` is true, and compares exactly elsewhere
+  because `A.srt` and `a.srt` are genuinely distinct files on macOS and Linux. Collapsing them
+  there could hide a file from the user, so the conservative direction is deliberate. Both
+  branches are asserted in the test suite, and CI runs it on all three platforms.
