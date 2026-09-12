@@ -162,8 +162,14 @@ Adding a format starts here.
 
 Shared code is factored so dialects and formats do not duplicate each other: `ass/` holds one
 dialect-parameterised parser/writer/text-codec serving both ASS and SSA, and
-`lib/utils/inline_markup.dart` holds the HTML-ish scanner shared by SRT/VTT. A new format is one
-new directory plus one line in `built_in_formats.dart`; no core file changes.
+`lib/utils/inline_markup.dart` holds the HTML-ish scanner shared by SRT/VTT.
+
+Adding a format means: a value in the `SubtitleFormat` enum, a parser, a writer, a descriptor
+with its content signatures, and one line in `built_in_formats.dart`. There is no central
+`switch` on the format enum and no pairwise converter anywhere — every conversion goes through
+the same `parse -> SubtitleDocument -> write` path. Two deliberate exceptions are format-specific
+rules rather than format registration: `LossAnalyzer` has an LRC branch (LRC has neither end
+times nor line breaks), and each writer knows its own output grammar.
 
 ## Lossy conversions
 
@@ -171,6 +177,11 @@ A conversion that loses information still succeeds — loss is a value, not an e
 `LossAnalyzer.analyze` compares the document against the target descriptor and returns a
 `LossReport` of user-facing warnings, which `ConversionResult.warnings` carries to the UI; a
 result with warnings is still `succeeded` and `ConversionResult.isLossy` is true.
+
+It also reports one source-side oddity: a cue whose end precedes its start. That is usually a
+typo in the source, but the file still converts — rejecting a whole file over one bad cue would
+lose far more than it protects — so the interval is written through unchanged and the user is
+told.
 
 The analyzer is capability-driven, so a new format gets sensible reporting just by declaring
 its flags:
