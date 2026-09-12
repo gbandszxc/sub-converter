@@ -163,7 +163,9 @@ void main() {
         contains('Microsoft YaHei UI'),
       );
       expect(find.text(en.fontSystemDefault), findsOneWidget);
-      expect(find.text(en.fontSystemDefaultHelp), findsOneWidget);
+      // The explanation lives in a hover tooltip on the label's info icon,
+      // not as a rendered caption line.
+      expect(find.byTooltip(en.fontSystemDefaultHelp), findsOneWidget);
 
       await _selectFont(tester, 'Bravo Serif');
       expect(controller.fontFamily, 'Bravo Serif');
@@ -172,8 +174,8 @@ void main() {
         'Bravo Serif',
       );
       expect(store.values['fontFamily'], 'Bravo Serif');
-      // The helper only explains the system default choice.
-      expect(find.text(en.fontSystemDefaultHelp), findsNothing);
+      // The tooltip documents the setting in every state.
+      expect(find.byTooltip(en.fontSystemDefaultHelp), findsOneWidget);
 
       await _selectFont(tester, en.fontSystemDefault);
       expect(controller.fontFamily, isNull);

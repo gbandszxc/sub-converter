@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'section_label.dart';
 import 'ui_constants.dart';
 
 /// A compact section label plus a full-width dropdown.
@@ -10,7 +11,7 @@ class LabelledDropdown<T> extends StatelessWidget {
     required this.value,
     required this.items,
     required this.onChanged,
-    this.helperText,
+    this.helpText,
   });
 
   final String label;
@@ -18,15 +19,15 @@ class LabelledDropdown<T> extends StatelessWidget {
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
 
-  /// Optional one-line explanation shown under the dropdown.
-  final String? helperText;
+  /// Optional explanation shown on hover, on an info icon next to [label].
+  final String? helpText;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(label, style: AppTextStyles.sectionTitle),
+        SectionLabel(label, tooltip: helpText),
         const SizedBox(height: AppSpacing.sm),
         DropdownButtonFormField<T>(
           initialValue: value,
@@ -42,13 +43,6 @@ class LabelledDropdown<T> extends StatelessWidget {
           items: items,
           onChanged: onChanged,
         ),
-        if (helperText != null) ...<Widget>[
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            helperText!,
-            style: AppTextStyles.caption.copyWith(color: mutedColor(context)),
-          ),
-        ],
       ],
     );
   }

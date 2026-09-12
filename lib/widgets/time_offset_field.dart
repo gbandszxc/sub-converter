@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../i18n/app_strings.dart';
 import '../screens/app_controller.dart';
 import '../utils/subtitle_defaults.dart';
+import 'section_label.dart';
 import 'ui_constants.dart';
 
 /// Millisecond offset control with stepped buttons and a reset.
@@ -88,7 +89,7 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(strings.timeOffset, style: AppTextStyles.sectionTitle),
+        SectionLabel(strings.timeOffset, tooltip: strings.timeOffsetHint),
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: <Widget>[
@@ -140,11 +141,6 @@ class _TimeOffsetFieldState extends State<TimeOffsetField> {
               icon: const Icon(Icons.restart_alt, size: 18),
             ),
           ],
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          strings.timeOffsetHint,
-          style: AppTextStyles.caption.copyWith(color: mutedColor(context)),
         ),
       ],
     );

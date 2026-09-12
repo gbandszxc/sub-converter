@@ -161,7 +161,7 @@ class OptionsPanel extends StatelessWidget {
     return LabelledDropdown<OutputConflictPolicy>(
       label: strings.conflict,
       value: controller.options.conflictPolicy,
-      helperText: _conflictExplanation(
+      helpText: _conflictExplanation(
         strings,
         controller.options.conflictPolicy,
       ),
@@ -269,7 +269,7 @@ class OptionsPanel extends StatelessWidget {
     return LabelledDropdown<String>(
       label: strings.font,
       value: selected ?? _systemDefaultChoice,
-      helperText: selected == null ? strings.fontSystemDefaultHelp : null,
+      helpText: strings.fontSystemDefaultHelp,
       items: <DropdownMenuItem<String>>[
         DropdownMenuItem<String>(
           value: _systemDefaultChoice,
