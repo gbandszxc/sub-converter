@@ -19,6 +19,67 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
+// The desktop's default UI font (the gtk-font-name setting, e.g.
+// "Cantarell 11" on GNOME) reduced to its family name. Returns null when
+// the setting is absent or names no family.
+static FlValue* default_font_family() {
+  GtkSettings* settings = gtk_settings_get_default();
+  if (settings == nullptr) {
+    return nullptr;
+  }
+  gchar* font_name = nullptr;
+  g_object_get(settings, "gtk-font-name", &font_name, nullptr);
+  PangoFontDescription* description =
+      pango_font_description_from_string(font_name != nullptr ? font_name : "");
+  const gchar* family = pango_font_description_get_family(description);
+  FlValue* result =
+      family != nullptr ? fl_value_new_string(family) : nullptr;
+  pango_font_description_free(description);
+  g_free(font_name);
+  return result;
+}
+
+// Handles the "sub_converter/fonts" channel. |user_data| is the application
+// window, whose Pango context exposes the font map (fontconfig) used to
+// enumerate installed families.
+static void font_channel_handler(FlMethodChannel* channel,
+                                 FlMethodCall* method_call,
+                                 gpointer user_data) {
+  const gchar* method = fl_method_call_get_name(method_call);
+  g_autoptr(FlValue) result = nullptr;
+  if (g_strcmp0(method, "installedFontFamilies") == 0) {
+    result = fl_value_new_list();
+    PangoContext* context =
+        gtk_widget_get_pango_context(GTK_WIDGET(user_data));
+    if (context != nullptr) {
+      PangoFontMap* font_map = pango_context_get_font_map(context);
+      PangoFontFamily** families = nullptr;
+      int count = 0;
+      if (font_map != nullptr) {
+        pango_font_map_list_families(font_map, &families, &count);
+      }
+      for (int i = 0; i < count; i++) {
+        fl_value_append_take(
+            result,
+            fl_value_new_string(pango_font_family_get_name(families[i])));
+      }
+      g_free(families);
+    }
+  } else if (g_strcmp0(method, "defaultFontFamily") == 0) {
+    result = default_font_family();
+  } else {
+    fl_method_call_respond(
+        method_call,
+        FL_METHOD_RESPONSE(fl_method_not_implemented_response_new()),
+        nullptr);
+    return;
+  }
+  // A null |result| answers null on the Dart side (unknown default).
+  fl_method_call_respond(
+      method_call,
+      FL_METHOD_RESPONSE(fl_method_success_response_new(result)), nullptr);
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
@@ -74,6 +135,15 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  // App-lifetime channel answering the Dart side's font questions; both the
+  // channel and the handler stay registered until the process exits.
+  FlMethodChannel* font_channel =
+      fl_method_channel_new(fl_view_get_messenger(view), "sub_converter/fonts",
+                            FL_METHOD_CODEC(fl_standard_method_codec_new()));
+  fl_method_channel_set_method_call_handler(font_channel,
+                                            font_channel_handler, window,
+                                            nullptr);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
