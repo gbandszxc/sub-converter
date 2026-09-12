@@ -316,6 +316,47 @@ void main() {
     expect(second.options.writeUtf8Bom, isTrue);
   });
 
+  test('a 100 file batch converts without losing any file', () async {
+    // Goal scale: 1-100 files in one run. Every file is independent, progress
+    // is reported per file, and nothing may be dropped along the way.
+    final Directory out = Directory(p.join(workspace.path, 'bulk'))..createSync();
+    final List<String> sources = <String>[];
+    for (int index = 0; index < 100; index++) {
+      final File file = File(
+        p.join(workspace.path, 'E${index.toString().padLeft(3, '0')}.ass'),
+      );
+      file.writeAsBytesSync(
+        File(p.join('test', 'fixtures', 'ass', 'basic.ass')).readAsBytesSync(),
+      );
+      sources.add(file.path);
+    }
+
+    final AppController controller = controllerFor(
+      target: SubtitleFormat.srt,
+      location: OutputLocation.customDirectory,
+      directory: out.path,
+    );
+    await controller.addPaths(sources);
+    await settleInspection(controller);
+    expect(controller.completedCount, 0, reason: 'nothing converts on add');
+
+    final Stopwatch stopwatch = Stopwatch()..start();
+    await controller.convertAll();
+    stopwatch.stop();
+
+    expect(controller.fileCount, 100);
+    expect(controller.successCount, 100);
+    expect(controller.failureCount, 0);
+    expect(out.listSync().whereType<File>().length, 100);
+    // Generous safety net against pathological slowness, not a performance
+    // target: subtitle files are kilobytes.
+    expect(
+      stopwatch.elapsed,
+      lessThan(const Duration(seconds: 60)),
+      reason: '100 small files took ${stopwatch.elapsed}',
+    );
+  });
+
   test('every fixture format converts to every other format on disk', () async {
     final Map<SubtitleFormat, String> fixtures = <SubtitleFormat, String>{
       SubtitleFormat.srt: 'basic.srt',
