@@ -1,0 +1,232 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sub_converter/models/conversion_job.dart';
+import 'package:sub_converter/models/subtitle_exception.dart';
+import 'package:sub_converter/models/subtitle_format.dart';
+import 'package:sub_converter/screens/app_controller.dart';
+import 'package:sub_converter/services/settings_store.dart';
+
+import 'fakes.dart';
+
+void main() {
+  group('AppController file list', () {
+    test('starts empty and cannot convert', () {
+      final AppController controller = testController();
+      addTearDown(controller.dispose);
+
+      expect(controller.entries, isEmpty);
+      expect(controller.canConvert, isFalse);
+      expect(controller.fileCount, 0);
+    });
+
+    test('adding paths populates entries and inspects them', () async {
+      final AppController controller = testController();
+      addTearDown(controller.dispose);
+
+      await controller.addPaths(<String>['/movies/a.srt', '/movies/b.ass']);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.fileCount, 2);
+      expect(controller.canConvert, isTrue);
+      expect(controller.entries.first.detectedFormat, SubtitleFormat.srt);
+      expect(controller.entries.last.detectedFormat, SubtitleFormat.ass);
+    });
+
+    test(
+      'duplicate paths are ignored, case-insensitively on Windows',
+      () async {
+        final AppController controller = testController();
+        addTearDown(controller.dispose);
+
+        await controller.addPaths(<String>[
+          r'C:\Movies\A.srt',
+          r'C:\Movies\A.srt',
+          r'C:\Movies\a.SRT',
+        ]);
+
+        expect(controller.fileCount, 1);
+      },
+    );
+
+    test('inspection failure keeps the row with an explanation', () async {
+      final FakeFileService service = FakeFileService(
+        inspectHandler: (String path) async {
+          throw SubtitleConversionException(
+            ConversionFailure.readFailed,
+            'The file does not exist.',
+          );
+        },
+      );
+      final AppController controller = testController(fileService: service);
+      addTearDown(controller.dispose);
+
+      await controller.addPaths(<String>['/movies/missing.srt']);
+      await Future<void>.delayed(Duration.zero);
+
+      final SubtitleFileEntry entry = controller.entries.single;
+      expect(entry.inspectionError, 'The file does not exist.');
+      expect(entry.detectedFormat, isNull);
+      expect(controller.canConvert, isTrue);
+    });
+
+    test('clear removes every row; remove removes one', () async {
+      final AppController controller = testController();
+      addTearDown(controller.dispose);
+
+      await controller.addPaths(<String>['/a.srt', '/b.srt', '/c.srt']);
+      controller.removeEntry(controller.entries.first);
+      expect(controller.fileCount, 2);
+
+      controller.clearEntries();
+      expect(controller.entries, isEmpty);
+    });
+  });
+
+  group('AppController options', () {
+    test('custom output folder requires a directory', () async {
+      final AppController controller = testController();
+      addTearDown(controller.dispose);
+      await controller.addPaths(<String>['/a.srt']);
+
+      controller.setOutputLocation(OutputLocation.customDirectory);
+      expect(controller.options.validationError(), isNotNull);
+      expect(controller.canConvert, isFalse);
+
+      controller.setOutputDirectory('/out');
+      expect(controller.options.validationError(), isNull);
+      expect(controller.canConvert, isTrue);
+    });
+
+    test('settings round-trip through the store', () async {
+      final InMemorySettingsStore store = InMemorySettingsStore();
+      final AppController first = testController(settingsStore: store);
+      addTearDown(first.dispose);
+
+      first.setTargetFormat(SubtitleFormat.vtt);
+      first.setOutputLocation(OutputLocation.customDirectory);
+      first.setOutputDirectory('/out');
+      first.setConflictPolicy(OutputConflictPolicy.overwrite);
+      first.setTimeOffset(const Duration(milliseconds: -1200));
+      first.setWriteUtf8Bom(true);
+      await Future<void>.delayed(Duration.zero);
+
+      final AppController second = testController(settingsStore: store);
+      addTearDown(second.dispose);
+      await second.loadSettings();
+
+      expect(second.options.targetFormat, SubtitleFormat.vtt);
+      expect(second.options.outputLocation, OutputLocation.customDirectory);
+      expect(second.options.outputDirectory, '/out');
+      expect(second.options.conflictPolicy, OutputConflictPolicy.overwrite);
+      expect(second.options.timeOffset, const Duration(milliseconds: -1200));
+      expect(second.options.writeUtf8Bom, isTrue);
+    });
+
+    test('corrupt persisted values fall back to defaults', () async {
+      final InMemorySettingsStore store = InMemorySettingsStore(
+        <String, Object?>{
+          'targetFormat': 42,
+          'outputLocation': 'not-a-location',
+          'conflictPolicy': false,
+          'timeOffsetMs': 'oops',
+          'writeUtf8Bom': 'yes',
+        },
+      );
+      final AppController controller = testController(settingsStore: store);
+      addTearDown(controller.dispose);
+
+      await controller.loadSettings();
+
+      expect(controller.options.targetFormat, SubtitleFormat.srt);
+      expect(controller.options.outputLocation, OutputLocation.sourceDirectory);
+      expect(
+        controller.options.conflictPolicy,
+        OutputConflictPolicy.autoRename,
+      );
+      expect(controller.options.timeOffset, Duration.zero);
+      expect(controller.options.writeUtf8Bom, isFalse);
+    });
+  });
+
+  group('AppController conversion', () {
+    test('successful batch reports counts and message', () async {
+      final AppController controller = testController();
+      addTearDown(controller.dispose);
+      await controller.addPaths(<String>['/a.srt', '/b.srt']);
+
+      await controller.convertAll();
+
+      expect(controller.isConverting, isFalse);
+      expect(controller.successCount, 2);
+      expect(controller.failureCount, 0);
+      expect(controller.lossyCount, 0);
+      expect(controller.batchMessage, '2 succeeded.');
+      expect(
+        controller.entries.every((SubtitleFileEntry e) => e.result!.isSuccess),
+        isTrue,
+      );
+    });
+
+    test('one failure does not stop the batch', () async {
+      final FakeFileService service = FakeFileService(
+        convertBuilder: (String path, ConversionOptions options) =>
+            path.endsWith('bad.srt')
+            ? failureResult(path)
+            : successResult(path, options),
+      );
+      final AppController controller = testController(fileService: service);
+      addTearDown(controller.dispose);
+      await controller.addPaths(<String>['/a.srt', '/bad.srt', '/c.srt']);
+
+      await controller.convertAll();
+
+      expect(controller.successCount, 2);
+      expect(controller.failureCount, 1);
+      expect(controller.batchMessage, '2 succeeded, 1 failed.');
+    });
+
+    test('lossy success counts as success and lossy', () async {
+      final FakeFileService service = FakeFileService(
+        convertBuilder: (String path, ConversionOptions options) =>
+            successResult(path, options, warnings: <String>['Bold dropped.']),
+      );
+      final AppController controller = testController(fileService: service);
+      addTearDown(controller.dispose);
+      await controller.addPaths(<String>['/a.srt']);
+
+      await controller.convertAll();
+
+      expect(controller.successCount, 1);
+      expect(controller.lossyCount, 1);
+      expect(controller.entries.single.result!.isLossy, isTrue);
+    });
+
+    test('convert passes the current options to the service', () async {
+      final FakeFileService service = FakeFileService();
+      final AppController controller = testController(fileService: service);
+      addTearDown(controller.dispose);
+      await controller.addPaths(<String>['/a.srt']);
+      controller.setTargetFormat(SubtitleFormat.lrc);
+
+      await controller.convertAll();
+
+      expect(service.lastConvertedPaths, <String>['/a.srt']);
+      expect(service.lastOptions!.targetFormat, SubtitleFormat.lrc);
+    });
+
+    test('remove and clear are ignored while converting', () async {
+      final FakeFileService service = FakeFileService();
+      final AppController controller = testController(fileService: service);
+      addTearDown(controller.dispose);
+      await controller.addPaths(<String>['/a.srt', '/b.srt']);
+
+      final Future<void> running = controller.convertAll();
+      expect(controller.isConverting, isTrue);
+      controller.removeEntry(controller.entries.first);
+      controller.clearEntries();
+      expect(controller.fileCount, 2);
+
+      await running;
+      expect(controller.isConverting, isFalse);
+    });
+  });
+}
