@@ -17,7 +17,7 @@
 ```bash
 flutter pub get
 flutter analyze                  # 必须 "No issues found!"（0 issue）
-flutter test                     # 必须全绿；当前 369 个测试
+flutter test                     # 必须全绿；当前 379 个测试
 flutter build windows --release  # 产物 build\windows\x64\runner\Release\
 flutter build macos   --release
 flutter build linux   --release
@@ -53,6 +53,7 @@ packaging/macos/build-dmg.sh
 | 拖入的目录只展开一级 | 目录→字幕文件的展开只在 `FileService.expandPaths`：只取该目录的直接子文件，按注册表中的扩展名（含 alias）过滤，按文件名排序，不递归、不读文件内容；判定目录靠文件系统而不是拖放项的 `DropItem` 类型（Windows 上插件把目录当普通路径上报）；列目录失败必须静默返回已列出的部分 | `test/services/file_service_test.dart`、`test/widget/drag_drop_test.dart` |
 | 平台通道只在 `lib/platform/` | 向 OS 查询系统字体（枚举 + 默认字体）走唯一的 `sub_converter/fonts` 通道：Dart 侧包装在 `lib/platform/system_fonts.dart`，策略（各平台默认字体与回退链）在纯 Dart 的 `lib/platform/app_typography.dart`，原生实现在三个 runner 内。查询失败必须静默降级到策略默认值，不得抛出 | `test/platform/app_typography_test.dart`、`test/widget/font_settings_test.dart` |
 | 绝不修改源文件 | `OutputPathResolver` 在任何策略下都拒绝把源文件当输出路径（含 overwrite） | `test/services/output_path_resolver_test.dart` |
+| 媒体后缀剥离只认媒体扩展名 | 「去除媒体后缀」默认关闭；开启后仅当文件名主干以 `OutputPathResolver.mediaExtensions` 中的扩展名结尾时才去除（`AAAA.wav.vtt` → `AAAA.lrc`），语言标签等非媒体后缀不动，剥空主干被拒绝；冲突处理与源文件保护都作用于剥离后的名字 | `test/services/output_path_resolver_test.dart`、`test/services/file_service_test.dart` |
 | 输出恒为 UTF-8（可选 BOM） | 不提供其他输出编码 | `test/services/file_service_test.dart` |
 | 时间只用 `Duration` | 不得把格式化时间戳当内部表示 | `lib/models/subtitle_cue.dart` |
 | 时间戳解析/格式化只有一份 | 所有格式必须用 `lib/utils/timestamp.dart` | 10 个 parser/writer 均 import 它 |
@@ -120,12 +121,15 @@ packaging/macos/build-dmg.sh
 10. **拖入目录的行为**（只展开一级、按已注册扩展名过滤、不递归）—— 两份 README 的使用段与测试
     覆盖段、`docs/ARCHITECTURE.md` 的 Input resolution 段、`lib/services/file_service.dart` 的
     `expandPaths` doc comment。校验：`test/services/file_service_test.dart`。
+11. **媒体后缀扩展名清单** —— 两份 README 的「去除媒体后缀」说明与
+    `OutputPathResolver.mediaExtensions`（逐字对应）。校验：
+    `test/services/output_path_resolver_test.dart`。
 
 ## 7. 提交前自检
 
 ```bash
 flutter analyze   # 0 issue
-flutter test      # 全绿（当前 369）
+flutter test      # 全绿（当前 379）
 ```
 
 - [ ] 若改动用户可见行为 → 更新两份 README；涉及打包 → 更新 `packaging/msi/README.md`

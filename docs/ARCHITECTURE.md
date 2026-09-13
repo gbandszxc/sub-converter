@@ -233,9 +233,16 @@ never fail on it.
 ## File safety
 
 `OutputPathResolver` decides the output path from three inputs: the requested name
-(`<source base>.<target extension>`), the chosen directory, and an injected
-`exists(path)` predicate — so the rules are unit-testable and the resolver can never write.
+(`<source base>.<target extension>`, optionally after media-suffix stripping), the chosen
+directory, and an injected `exists(path)` predicate — so the rules are unit-testable and the
+resolver can never write.
 
+- Media-suffix stripping (off by default) drops a trailing media extension from the base name
+  before the target extension is appended, so `E01.wav.vtt` converting to LRC writes `E01.lrc`
+  instead of `E01.wav.lrc`. Only the curated set `OutputPathResolver.mediaExtensions` (common
+  audio/video containers, matched case-insensitively) is stripped, never a language tag such as
+  `.en`, and a base name that would strip to nothing is kept whole. All rules below then apply
+  to the stripped name.
 - The source file is never a valid output. If the resolved path equals the source (including
   absolute-form and Windows case-insensitive comparison via `package:path`), the name is
   changed **even under `overwrite`**.

@@ -125,13 +125,24 @@ when the only collision would be the source.
 | Conflict policy | Auto rename, Overwrite, Skip | Auto rename |
 | Time offset | Signed milliseconds (typed, or stepped by ±500 ms, with reset) | 0 ms |
 | Write UTF-8 BOM | On / off | Off |
+| Strip media suffix | On / off | Off |
 | Language | Follow system, English, 简体中文 | Follow system |
 | Font | Follow system, or any installed font family | Follow system |
 
 Times are shifted uniformly and clamped at zero, so a negative offset never produces a negative
 timestamp. The overwrite policy replaces an existing *output* file but still refuses to replace
 the source. Settings (target format, output location, chosen folder, conflict policy, offset,
-BOM, language, font) are persisted with `shared_preferences` and restored between runs.
+BOM, media-suffix stripping, language, font) are persisted with `shared_preferences` and
+restored between runs.
+
+**Strip media suffix.** Some subtitles are named after the media file they belong to, e.g.
+`AAAA.wav.vtt`. By default converting that file to LRC writes `AAAA.wav.lrc`; with this option
+on, the inner media extension is dropped and the output is `AAAA.lrc`. It applies to every
+target format and only strips a common audio/video container extension — `aac`, `ape`, `flac`,
+`m4a`, `mp3`, `oga`, `ogg`, `opus`, `wav`, `wma`, `avi`, `flv`, `m4v`, `mkv`, `mov`, `mp4`,
+`mpeg`, `mpg`, `ts`, `webm`, `wmv` — so a language tag in `E01.en.srt` is never touched.
+Conflict handling (auto rename / overwrite / skip) applies to the stripped name, and the source
+file still can never be the output.
 
 ### Fonts
 
@@ -176,13 +187,14 @@ valid UTF-8. Detection failures are reported per file rather than guessed throug
 flutter test
 ```
 
-The suite currently contains **369 tests, all passing**. Coverage:
+The suite currently contains **379 tests, all passing**. Coverage:
 
 - **Core**: timestamp parse/format rules, the unified model (`SubtitleDocument`/`SubtitleCue`), and the shared inline-markup scanner.
 - **Formats**: dedicated parser/writer tests for each of SRT, VTT, LRC, ASS, SSA and SBV, exercised against real fixtures (including CJK and tag-heavy files).
 - **Conversion matrix**: a generated 6x6 test that converts every fixture to every format, re-parses the output with the target's own parser and checks cue count and start-time drift.
 - **Encoding**: BOM handling, UTF-16/UTF-32 detection, ASCII/CJK/SJIS/GBK/GB18030 cases, Windows-1252 fallback and failure behavior.
-- **Path and file safety**: conflict policies and the "never overwrite the source" rule; batch conversion, progress and per-file failures.
+- **Path and file safety**: conflict policies, media-suffix stripping and the "never overwrite
+  the source" rule; batch conversion, progress and per-file failures.
 - **UI/controller**: `AppController` state and persistence, widget tests for the home screen, the language and font pickers, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, a dropped folder expanded to the subtitle files inside it, empty paths ignored, duplicates collapsed).
 - **App font**: per-platform default families, desktop overrides, fallback chains, persistence, and the picker's behavior with fonts that are not installed.
 - **End to end**: the real `FileService` and `AppController` against real files on disk, including the full all-format matrix.
