@@ -192,14 +192,15 @@ flutter test
 
 | 平台 | Runner | 测试 | Release 构建 | 启动 |
 | --- | --- | --- | --- | --- |
-| Windows | `windows-latest` | 346 通过 | `sub_converter.exe` | 是，12 秒后仍存活 |
-| macOS | `macos-latest` | 346 通过 | `Subtitle Converter.app`（45.4 MB） | 是，12 秒后仍存活 |
-| Linux | `ubuntu-latest` | 346 通过 | `sub_converter` bundle | 是，15 秒后仍存活 |
+| Windows | `windows-latest` | 390 通过 | `sub_converter.exe` | 是，12 秒后仍存活 |
+| macOS | `macos-latest` | 390 通过 | `Subtitle Converter.app` | 是，12 秒后仍存活 |
+| Linux | `ubuntu-latest` | 390 通过 | `sub_converter` bundle | 是，15 秒后仍存活 |
 
-最近一次完整 CI 验证：commit `480c053`，CI run 34697190030，三个 job 全绿（346 个测试）。
-系统字体相关的提交另在真实 Windows 机器上验证过（release 构建、MSI 安装、实机 UI 操作）；
-推送最新提交、CI 跑完后，上表数字会刷新为当时的测试数。Linux job 在 `Xvfb` 下以
-`LIBGL_ALWAYS_SOFTWARE=1` 启动，因为无头 runner 既没有显示器也没有 GPU。
+最近一次完整 CI 验证：commit `25094b1`，CI run 34752695958，三个 job 全绿（390 个测试）。
+其中 Windows 与 macOS job 还会把发布版打成安装包（`sub-converter-0.1.0.msi` 12.5 MB、
+`sub-converter-0.1.0.dmg` 23 MB）。系统字体相关的提交另在真实 Windows 机器上验证过（release
+构建、MSI 安装、实机 UI 操作）。Linux job 在 `Xvfb` 下以 `LIBGL_ALWAYS_SOFTWARE=1` 启动，
+因为无头 runner 既没有显示器也没有 GPU。
 
 有一处行为是**有意按平台区分**的，而且正是 CI 把它暴露出来的：路径去重**只在 Windows** 上
 大小写不敏感（因为其文件系统如此）。在 macOS 与 Linux 上 `A.srt` 与 `a.srt` 确实是两个不同

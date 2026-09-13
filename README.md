@@ -216,15 +216,16 @@ DMG, both uploaded as workflow artifacts.
 
 | Target | Runner | Tests | Release build | Launches |
 | --- | --- | --- | --- | --- |
-| Windows | `windows-latest` | 346 passed | `sub_converter.exe` | yes, alive after 12s |
-| macOS | `macos-latest` | 346 passed | `Subtitle Converter.app` (45.4 MB) | yes, alive after 12s |
-| Linux | `ubuntu-latest` | 346 passed | `sub_converter` bundle | yes, alive for 15s |
+| Windows | `windows-latest` | 390 passed | `sub_converter.exe` | yes, alive after 12s |
+| macOS | `macos-latest` | 390 passed | `Subtitle Converter.app` | yes, alive after 12s |
+| Linux | `ubuntu-latest` | 390 passed | `sub_converter` bundle | yes, alive for 15s |
 
-Last fully CI-verified on commit `480c053`, CI run 34697190030, all three jobs green
-(346 tests). The system-font feature commits are additionally verified on a real Windows
-machine (release build, MSI install, live UI); the table above refreshes to their counts
-once CI runs on the latest commit. The Linux job launches under `Xvfb` with
-`LIBGL_ALWAYS_SOFTWARE=1`, since a headless runner has neither a display nor a GPU.
+Last fully CI-verified on commit `25094b1`, CI run 34752695958, all three jobs green
+(390 tests). The Windows and macOS jobs also package their build into the installers
+(`sub-converter-0.1.0.msi`, 12.5 MB; `sub-converter-0.1.0.dmg`, 23 MB). The system-font
+feature commits were additionally verified on a real Windows machine (release build, MSI
+install, live UI). The Linux job launches under `Xvfb` with `LIBGL_ALWAYS_SOFTWARE=1`, since
+a headless runner has neither a display nor a GPU.
 
 One behaviour is intentionally platform-dependent, and CI is what surfaced it: duplicate
 detection compares paths case-insensitively **only on Windows**, where the file system
