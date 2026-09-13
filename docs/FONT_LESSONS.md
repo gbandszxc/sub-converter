@@ -2,7 +2,7 @@
 
 > 来源：sub-converter v0.1 实现「默认使用系统字体 + 用户自选字体」功能时实际踩过的坑。
 > 目标读者：开发其它 Flutter 桌面工具（或原理类似的桌面应用）的自己人。
-> 每一节都按「症状 → 根因 → 解法」组织，第 8 节是开工/验收清单。
+> 每一节都按「症状 → 根因 → 解法」组织，第 9 节是开工/验收清单。
 > 本仓库的对应实现在 `lib/platform/` 与三个 runner，可作活例子。
 
 ## 1. 不要依赖引擎的默认字体回退
@@ -16,7 +16,8 @@
 **解法**：主动指定真实 UI 字体族 + 一条有序的 CJK 回退链，而不是把字体决策留给引擎：
 
 - 主题里对所有文本样式应用 `fontFamily` + `fontFamilyFallback`
-  （`TextTheme.apply(...)`，一次覆盖全部样式）；
+  （`TextTheme.apply(...)`，一次覆盖全部样式——**前提是主题从完整的 Material
+  字体表派生**，否则 apply 根本碰不到没写的样式，见第 8 节）；
 - 回退链放在**任何情况下都生效**的位置——用户自选的字体可能缺 CJK 字形，
   回退链保证中文依然由雅黑/苹方等接管（见第 5 节）；
 - 各平台默认值与回退链收在**一个纯 Dart 数据文件**里（本仓库：
@@ -139,12 +140,48 @@ w500 的控件值是粗体；若同时存在逐字回退（第 5 节），不同
 - 验证手段：**DPI 感知的原生截图**放大看真实像素（`SetProcessDPIAware()` +
   `CopyFromScreen`，PowerShell 的 System.Drawing 默认 DPI 虚拟化会骗你）。
 
-## 8. 开工 / 验收清单
+## 8. TextTheme 手写 partial + apply()：ListTile、按钮、输入框会"漏网"
+
+**症状**：下拉框的选中值已经是正确的应用字体，但单选/复选行的标签、按钮文字
+字形不对、笔画发虚、字距被拉开——像是同一屏混了两种字体。
+
+**根因**：`TextTheme.apply(fontFamily: ...)` **只改写非空样式**。若主题用
+`const TextTheme(bodyMedium: ..., titleMedium: ...)` 手写一个只有三两个样式的
+partial 主题，其余样式（`bodyLarge`、`labelLarge` 等）为 null，`ThemeData` 会拿
+Material 默认值补齐——补齐的默认值**没有字族**，`bodyLarge` 还自带
+`letterSpacing: 0.5`。而恰恰是这些"没写"的样式在驱动一批最常用的控件：
+
+| 控件 | 用的 theme 样式 | 症状 |
+| --- | --- | --- |
+| ListTile 标题（M3 单选/复选行） | `bodyLarge` | 回退字体 + 0.5px 字距 |
+| TextField 正文 | `bodyLarge` | 同上 |
+| 按钮标签 | `labelLarge` | 回退字体 + w500 |
+
+同屏就出现"下拉框是 MiSans、单选行是引擎回退"的混杂，用户看到的是
+"红圈里的字粗细和别人不一样"。
+
+**解法**：
+
+- 主题从**完整的 Material 字体表**派生：`Typography.material2021()` 的
+  `.black` / `.white`（亮/暗各一），`.merge()` 上密度与字重覆盖，最后
+  `.apply()` 把字族 + 回退链盖到**每一个**样式；
+- 覆盖项用 merge 表达（本仓库：body 13/12、`titleMedium` 13/w400、
+  `labelLarge` w400，正文字距统一 0）；
+- 排查口诀：怀疑某控件没吃到应用字体时，先查它用哪个 theme 样式
+  （ListTile/TextField = `bodyLarge`，按钮 = `labelLarge`，下拉值 =
+  `titleMedium`），再查主题里该样式有没有字族；
+- 回归测试不要只断言 `bodyMedium`：直接断言 `theme.textTheme.bodyLarge!`、
+  `labelLarge!` 的字族/字重/字距，并检查渲染树上 ListTile 标题最近的环境
+  `DefaultTextStyle`。widget 测试里 flutter_test 会在 MaterialApp 之上再套一个
+  `inherit=true`、family 为 `monospace` 的根样式，按 `inherit` 过滤即可。
+
+## 9. 开工 / 验收清单
 
 实现同类功能时按顺序过一遍：
 
-- [ ] 主题：`fontFamily` + `fontFamilyFallback` 应用到全部文本样式；
-      无隐式 w500；标题用 w600+
+- [ ] 主题：**从完整 Material 字体表派生**（Typography → merge 覆盖 →
+      apply 全部样式，见第 8 节）；字族+回退链覆盖到 bodyLarge/labelLarge
+      这类"没显式写"的样式；无隐式 w500；正文字距 0；标题用 w600+
 - [ ] 默认字体来源：Win = 消息字体（NONCLIENTMETRICS），mac = 苹方，
       Linux = gtk-font-name + kdeglobals 兜底；查询失败有精选兜底值
 - [ ] 字体枚举：Windows 走 DirectWrite 集合（不是 GDI）；
@@ -157,7 +194,7 @@ w500 的控件值是粗体；若同时存在逐字回退（第 5 节），不同
       （MSI：`MajorUpgrade AllowSameVersionUpgrades="yes"`，见下节）
 - [ ] 三平台实机过一遍"默认渲染 + 切换字体 + 恢复默认"
 
-## 9. 附：两个与字体无关但一起踩掉的坑
+## 10. 附：两个与字体无关但一起踩掉的坑
 
 **MSI 同版本重装不覆盖文件**：MSI 对"版本号相同的已版本化文件"默认不覆盖，
 且同版本产品不会被 MajorUpgrade 识别（默认不允许同版本升级）。结果：新包"安装

@@ -168,7 +168,7 @@ UTF-8，否则按 Windows-1252 读取。检测失败会按文件报错，而不�
 flutter test
 ```
 
-当前共 **381 个测试，全部通过**。覆盖范围：
+当前共 **382 个测试，全部通过**。覆盖范围：
 
 - **核心**：时间戳解析/格式化规则、统一模型（`SubtitleDocument`/`SubtitleCue`）、共享的行内标记扫描器。
 - **各格式**：SRT、VTT、LRC、ASS、SSA、SBV 各自独立的 parser/writer 测试，使用真实 fixture（含中日文与含标签的文件）。

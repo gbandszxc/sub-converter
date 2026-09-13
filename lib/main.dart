@@ -82,16 +82,43 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
       _controller.platformName,
       primary: family,
     );
-    TextTheme textTheme = const TextTheme(
-      bodyMedium: TextStyle(fontSize: 13),
-      bodySmall: TextStyle(fontSize: 12),
-      // DropdownButton renders its closed value in titleMedium, whose Material
-      // default is w500. CJK UI fonts rarely ship a 500 face, so DirectWrite
-      // jumps to Bold for those runs while the surrounding text stays regular
-      // - the uneven weights this app must never show. Pin it to the regular
-      // weight and the body size.
-      titleMedium: TextStyle(fontSize: 13, fontWeight: FontWeight.w400),
-    );
+    // Start from the full Material text theme, never a hand-picked const:
+    // TextTheme.apply() below only rewrites non-null styles, so every style
+    // left out would keep the Material default - including its missing font
+    // family - and silently fall back to the engine font. That is exactly
+    // what bodyLarge drives (ListTile titles, TextField text) and labelLarge
+    // (button labels); those must follow the app font like everything else.
+    final Typography typography = Typography.material2021();
+    TextTheme textTheme =
+        (brightness == Brightness.light ? typography.black : typography.white)
+            .merge(
+              const TextTheme(
+                bodyLarge: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0,
+                ),
+                bodyMedium: TextStyle(fontSize: 13, letterSpacing: 0),
+                bodySmall: TextStyle(fontSize: 12, letterSpacing: 0),
+                // DropdownButton renders its closed value in titleMedium,
+                // whose Material default is w500. CJK UI fonts rarely ship a
+                // 500 face, so DirectWrite jumps to Bold for those runs while
+                // the surrounding text stays regular - the uneven weights
+                // this app must never show. Pin it to the regular weight and
+                // the body size.
+                titleMedium: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0,
+                ),
+                // Button labels default to w500, which hits the same trap on
+                // CJK fonts that only ship regular and bold.
+                labelLarge: TextStyle(
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 0,
+                ),
+              ),
+            );
     if (family != null) {
       textTheme = textTheme.apply(
         fontFamily: family,

@@ -136,6 +136,60 @@ void main() {
       expect(theme.textTheme.titleMedium!.fontFamily, 'Default UI');
     });
 
+    testWidgets('list tiles and buttons carry the app font too', (
+      WidgetTester tester,
+    ) async {
+      await useDesktopWindow(tester);
+      tester.platformDispatcher.localeTestValue = const Locale('en', 'US');
+      addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+      final AppController controller = testController(
+        systemFonts: systemFonts,
+        platformName: 'windows',
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(SubtitleConverterApp(controller: controller));
+      await tester.pumpAndSettle();
+
+      // bodyLarge drives ListTile titles (radio/checkbox rows) and TextField
+      // text, labelLarge drives button labels. Neither was part of the old
+      // hand-picked TextTheme, so both kept the Material default - no font
+      // family plus a 0.5 letter spacing - and silently fell back to the
+      // engine font. Every style the theme ships must follow the app font.
+      final ThemeData theme = currentTheme(tester);
+      expect(theme.textTheme.bodyLarge!.fontFamily, 'Default UI');
+      expect(theme.textTheme.bodyLarge!.fontSize, 13);
+      expect(theme.textTheme.bodyLarge!.fontWeight, FontWeight.w400);
+      expect(theme.textTheme.bodyLarge!.letterSpacing, 0);
+      expect(theme.textTheme.labelLarge!.fontFamily, 'Default UI');
+      expect(theme.textTheme.labelLarge!.fontWeight, FontWeight.w400);
+
+      // Rendered ground truth: every DefaultTextStyle wrapping one of these
+      // texts, including the tile's own title style, must carry the family.
+      // The test harness itself mounts an unrelated root style (inherit=true,
+      // family 'monospace') above MaterialApp, so only real app styles count.
+      void expectEveryAmbientStyleHasFamily(Finder text, String label) {
+        final List<DefaultTextStyle> styles =
+            tester
+                .widgetList<DefaultTextStyle>(
+                  find.ancestor(
+                    of: text,
+                    matching: find.byType(DefaultTextStyle),
+                  ),
+                )
+                .where((DefaultTextStyle style) => !style.style.inherit)
+                .toList();
+        expect(styles, isNotEmpty, reason: label);
+        for (final DefaultTextStyle style in styles) {
+          expect(style.style.fontFamily, 'Default UI', reason: label);
+        }
+      }
+
+      expectEveryAmbientStyleHasFamily(find.text(en.outputSourceFolder), 'radio row');
+      expectEveryAmbientStyleHasFamily(find.text(en.writeBom), 'checkbox row');
+      expectEveryAmbientStyleHasFamily(find.text(en.clear), 'button label');
+    });
+
     testWidgets('picks a font, renders it, and shows the system default',
         (WidgetTester tester) async {
       await useDesktopWindow(tester);
