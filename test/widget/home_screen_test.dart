@@ -173,4 +173,18 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Unknown'), findsOneWidget);
   });
+
+  testWidgets('the media-suffix checkbox toggles the option', (
+    WidgetTester tester,
+  ) async {
+    await useDesktopWindow(tester);
+    final AppController controller = testController();
+    addTearDown(controller.dispose);
+    await pumpHomeScreen(tester, controller);
+
+    expect(controller.options.stripMediaSuffix, isFalse);
+    await tester.tap(find.text('Strip media suffix'));
+    await tester.pump();
+    expect(controller.options.stripMediaSuffix, isTrue);
+  });
 }

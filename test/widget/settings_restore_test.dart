@@ -25,6 +25,7 @@ void main() {
     String conflictPolicy = 'skip',
     int timeOffsetMs = 500,
     bool writeUtf8Bom = true,
+    bool stripMediaSuffix = false,
     String? outputDirectory,
   }) {
     return InMemorySettingsStore(<String, Object?>{
@@ -36,6 +37,7 @@ void main() {
       'conflictPolicy': conflictPolicy,
       'timeOffsetMs': timeOffsetMs,
       'writeUtf8Bom': writeUtf8Bom,
+      'stripMediaSuffix': stripMediaSuffix,
     });
   }
 
@@ -45,7 +47,7 @@ void main() {
     await useDesktopWindow(tester);
     final AppController controller = AppController(
       fileService: FakeFileService(),
-      settingsStore: savedStore(),
+      settingsStore: savedStore(stripMediaSuffix: true),
     );
     addTearDown(controller.dispose);
 
@@ -56,6 +58,7 @@ void main() {
     expect(controller.options.conflictPolicy, OutputConflictPolicy.skip);
     expect(controller.options.timeOffset, const Duration(milliseconds: 500));
     expect(controller.options.writeUtf8Bom, isTrue);
+    expect(controller.options.stripMediaSuffix, isTrue);
 
     // ...and the controls show them, not their construction-time defaults.
     expect(find.text('LRC · LRC'), findsOneWidget);
@@ -64,7 +67,15 @@ void main() {
       tester.widget<TextField>(find.byType(TextField).first).controller!.text,
       '500',
     );
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+    // Two checkboxes exist (BOM and media suffix); find them by their labels.
+    CheckboxListTile checkboxOf(String label) {
+      return tester.widget<CheckboxListTile>(
+        find.widgetWithText(CheckboxListTile, label),
+      );
+    }
+
+    expect(checkboxOf('Write UTF-8 BOM').value, isTrue);
+    expect(checkboxOf('Strip media suffix').value, isTrue);
   });
 
   testWidgets('a custom output folder is restored and shown', (

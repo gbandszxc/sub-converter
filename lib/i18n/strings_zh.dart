@@ -71,6 +71,15 @@ class AppStringsZh extends AppStrings {
   String get writeBom => '写入 UTF-8 BOM';
 
   @override
+  String get stripMediaSuffix => '去除媒体后缀';
+
+  @override
+  String get stripMediaSuffixHelp =>
+      '「Movie.wav.vtt」这类名字带有媒体文件名：默认转换为 Movie.wav.lrc，'
+      '勾选后去掉中间的媒体扩展名，得到 Movie.lrc。仅当中间后缀是常见音频/'
+      '视频扩展名（wav、mp3、mp4、mkv 等）时才去除。';
+
+  @override
   String get language => '界面语言';
 
   @override

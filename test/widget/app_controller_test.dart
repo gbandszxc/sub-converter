@@ -143,6 +143,7 @@ void main() {
       first.setConflictPolicy(OutputConflictPolicy.overwrite);
       first.setTimeOffset(const Duration(milliseconds: -1200));
       first.setWriteUtf8Bom(true);
+      first.setStripMediaSuffix(true);
       await Future<void>.delayed(Duration.zero);
 
       final AppController second = testController(settingsStore: store);
@@ -155,6 +156,7 @@ void main() {
       expect(second.options.conflictPolicy, OutputConflictPolicy.overwrite);
       expect(second.options.timeOffset, const Duration(milliseconds: -1200));
       expect(second.options.writeUtf8Bom, isTrue);
+      expect(second.options.stripMediaSuffix, isTrue);
     });
 
     test('corrupt persisted values fall back to defaults', () async {
@@ -165,6 +167,7 @@ void main() {
           'conflictPolicy': false,
           'timeOffsetMs': 'oops',
           'writeUtf8Bom': 'yes',
+          'stripMediaSuffix': 'nope',
         },
       );
       final AppController controller = testController(settingsStore: store);
@@ -180,6 +183,7 @@ void main() {
       );
       expect(controller.options.timeOffset, Duration.zero);
       expect(controller.options.writeUtf8Bom, isFalse);
+      expect(controller.options.stripMediaSuffix, isFalse);
     });
   });
 

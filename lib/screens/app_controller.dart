@@ -70,6 +70,7 @@ class AppController extends ChangeNotifier {
   static const String _keyConflictPolicy = 'conflictPolicy';
   static const String _keyTimeOffsetMs = 'timeOffsetMs';
   static const String _keyWriteUtf8Bom = 'writeUtf8Bom';
+  static const String _keyStripMediaSuffix = 'stripMediaSuffix';
   static const String _keyLanguage = 'language';
   static const String _keyFontFamily = 'fontFamily';
 
@@ -310,6 +311,10 @@ class AppController extends ChangeNotifier {
     _updateOptions(_options.copyWith(writeUtf8Bom: value));
   }
 
+  void setStripMediaSuffix(bool value) {
+    _updateOptions(_options.copyWith(stripMediaSuffix: value));
+  }
+
   void _updateOptions(ConversionOptions options) {
     _options = options;
     notifyListeners();
@@ -369,9 +374,11 @@ class AppController extends ChangeNotifier {
         _options.conflictPolicy,
       ),
       timeOffset: Duration(milliseconds: _readInt(values[_keyTimeOffsetMs], 0)),
-      writeUtf8Bom: values[_keyWriteUtf8Bom] is bool
-          ? values[_keyWriteUtf8Bom]! as bool
-          : _options.writeUtf8Bom,
+      writeUtf8Bom: _readBool(values[_keyWriteUtf8Bom], _options.writeUtf8Bom),
+      stripMediaSuffix: _readBool(
+        values[_keyStripMediaSuffix],
+        _options.stripMediaSuffix,
+      ),
     );
     _language = _readEnum(values[_keyLanguage], AppLanguage.values, _language);
     _fontFamily = _readString(values[_keyFontFamily]);
@@ -411,6 +418,7 @@ class AppController extends ChangeNotifier {
         _keyConflictPolicy: options.conflictPolicy.name,
         _keyTimeOffsetMs: options.timeOffset.inMilliseconds,
         _keyWriteUtf8Bom: options.writeUtf8Bom,
+        _keyStripMediaSuffix: options.stripMediaSuffix,
         _keyLanguage: _language.name,
         _keyFontFamily: _fontFamily,
       });
@@ -477,6 +485,10 @@ class AppController extends ChangeNotifier {
       return int.tryParse(raw.trim()) ?? fallback;
     }
     return fallback;
+  }
+
+  static bool _readBool(Object? raw, bool fallback) {
+    return raw is bool ? raw : fallback;
   }
 
   @override

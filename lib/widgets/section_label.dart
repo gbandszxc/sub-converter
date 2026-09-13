@@ -19,7 +19,9 @@ class SectionLabel extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Text(text, style: AppTextStyles.sectionTitle),
+        // Flexible so a long title wraps in narrow containers (e.g. a
+        // ListTile title) instead of overflowing the Row.
+        Flexible(child: Text(text, style: AppTextStyles.sectionTitle)),
         if (tooltip != null && tooltip.trim().isNotEmpty) ...<Widget>[
           const SizedBox(width: AppSpacing.xs),
           Tooltip(

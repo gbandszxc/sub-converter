@@ -6,6 +6,7 @@ import '../models/conversion_job.dart';
 import '../models/subtitle_format.dart';
 import '../screens/app_controller.dart';
 import 'labelled_dropdown.dart';
+import 'section_label.dart';
 import 'time_offset_field.dart';
 import 'ui_constants.dart';
 
@@ -42,6 +43,7 @@ class OptionsPanel extends StatelessWidget {
           TimeOffsetField(controller: controller),
           const SizedBox(height: AppSpacing.md),
           _bomCheckbox(context, strings),
+          _mediaSuffixCheckbox(context, strings),
           const SizedBox(height: AppSpacing.lg),
           _language(context, strings),
           const SizedBox(height: AppSpacing.lg),
@@ -216,6 +218,22 @@ class OptionsPanel extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       controlAffinity: ListTileControlAffinity.leading,
       title: Text(strings.writeBom, style: AppTextStyles.body),
+    );
+  }
+
+  Widget _mediaSuffixCheckbox(BuildContext context, AppStrings strings) {
+    return CheckboxListTile(
+      value: controller.options.stripMediaSuffix,
+      onChanged: (bool? value) =>
+          controller.setStripMediaSuffix(value ?? false),
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
+      title: SectionLabel(
+        strings.stripMediaSuffix,
+        tooltip: strings.stripMediaSuffixHelp,
+      ),
     );
   }
 

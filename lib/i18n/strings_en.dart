@@ -74,6 +74,16 @@ class AppStringsEn extends AppStrings {
   String get writeBom => 'Write UTF-8 BOM';
 
   @override
+  String get stripMediaSuffix => 'Strip media suffix';
+
+  @override
+  String get stripMediaSuffixHelp =>
+      'Names like Movie.wav.vtt repeat the media file name. With this on, '
+      'converting to LRC writes Movie.lrc instead of Movie.wav.lrc. The '
+      'inner suffix is dropped only when it names a common audio or video '
+      'container (wav, mp3, mp4, mkv, ...).';
+
+  @override
   String get language => 'Language';
 
   @override

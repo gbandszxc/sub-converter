@@ -65,6 +65,8 @@ abstract class AppStrings {
   String get timeOffsetHint;
   String get resetOffset;
   String get writeBom;
+  String get stripMediaSuffix;
+  String get stripMediaSuffixHelp;
   String get language;
   String get languageSystem;
   String get languageEnglish;
