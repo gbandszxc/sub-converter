@@ -199,6 +199,7 @@ class FileService {
         targetFormat: options.targetFormat,
         policy: options.conflictPolicy,
         exists: (String path) => File(path).existsSync(),
+        stripMediaSuffix: options.stripMediaSuffix,
       );
       if (resolution.isSkip) {
         return ConversionResult(

@@ -22,6 +22,7 @@ void main() {
     SubtitleFormat target = SubtitleFormat.srt,
     OutputConflictPolicy policy = OutputConflictPolicy.autoRename,
     Set<String> taken = const <String>{},
+    bool stripMediaSuffix = false,
   }) {
     return resolver.resolve(
       sourcePath: p.joinAll(source.split('/')),
@@ -29,6 +30,7 @@ void main() {
       targetFormat: target,
       policy: policy,
       exists: existing(taken),
+      stripMediaSuffix: stripMediaSuffix,
     );
   }
 
@@ -150,6 +152,125 @@ void main() {
     });
   });
 
+  group('media suffix stripping', () {
+    test('is off by default: the media extension stays in the name', () {
+      expect(
+        resolve(
+          source: 'anime/AAAA.wav.vtt',
+          target: SubtitleFormat.lrc,
+        ).path,
+        p.join('anime', 'AAAA.wav.lrc'),
+      );
+    });
+
+    test('drops a media suffix for any target format', () {
+      expect(
+        OutputPathResolver.targetFileName(
+          p.join('anime', 'AAAA.wav.vtt'),
+          SubtitleFormat.lrc,
+          stripMediaSuffix: true,
+        ),
+        'AAAA.lrc',
+      );
+      expect(
+        OutputPathResolver.targetFileName(
+          p.join('anime', 'AAAA.wav.vtt'),
+          SubtitleFormat.srt,
+          stripMediaSuffix: true,
+        ),
+        'AAAA.srt',
+      );
+      expect(
+        resolve(
+          source: 'anime/AAAA.wav.vtt',
+          target: SubtitleFormat.lrc,
+          stripMediaSuffix: true,
+        ).path,
+        p.join('anime', 'AAAA.lrc'),
+      );
+    });
+
+    test('matches media extensions case-insensitively', () {
+      expect(
+        OutputPathResolver.targetFileName(
+          p.join('anime', 'AAAA.WAV.vtt'),
+          SubtitleFormat.lrc,
+          stripMediaSuffix: true,
+        ),
+        'AAAA.lrc',
+      );
+    });
+
+    test('covers every registered media extension', () {
+      for (final String extension in OutputPathResolver.mediaExtensions) {
+        expect(
+          OutputPathResolver.targetFileName(
+            p.join('anime', 'AAAA.$extension.vtt'),
+            SubtitleFormat.srt,
+            stripMediaSuffix: true,
+          ),
+          'AAAA.srt',
+          reason: 'extension .$extension should be stripped',
+        );
+      }
+    });
+
+    test('keeps non-media suffixes such as language tags', () {
+      expect(
+        OutputPathResolver.targetFileName(
+          p.join('anime', 'E01.en.srt'),
+          SubtitleFormat.srt,
+          stripMediaSuffix: true,
+        ),
+        'E01.en.srt',
+      );
+    });
+
+    test('keeps a name that only looks like an extension', () {
+      // `wav.vtt` has the stem `wav`, which does not end in `.wav`.
+      expect(
+        OutputPathResolver.targetFileName(
+          p.join('anime', 'wav.vtt'),
+          SubtitleFormat.lrc,
+          stripMediaSuffix: true,
+        ),
+        'wav.lrc',
+      );
+      // A stem of `.wav` would strip to an empty name, so it stays whole.
+      expect(
+        OutputPathResolver.targetFileName(
+          p.join('anime', '.wav.vtt'),
+          SubtitleFormat.lrc,
+          stripMediaSuffix: true,
+        ),
+        '.wav.lrc',
+      );
+    });
+
+    test('conflict handling applies to the stripped name', () {
+      final OutputPathResolution resolution = resolve(
+        source: 'anime/AAAA.wav.vtt',
+        target: SubtitleFormat.lrc,
+        taken: <String>{takenName('AAAA.lrc')},
+        stripMediaSuffix: true,
+      );
+      expect(resolution.path, p.join('anime', 'AAAA (1).lrc'));
+      expect(resolution.renamed, isTrue);
+    });
+
+    test('the stripped name still may not hit the source file', () {
+      // `E01.en.srt` keeps its name, which is the source itself, so the
+      // resolver must fall back to a numbered name.
+      final OutputPathResolution resolution = resolve(
+        source: 'anime/E01.en.srt',
+        target: SubtitleFormat.srt,
+        stripMediaSuffix: true,
+      );
+      expect(resolution.path, p.join('anime', 'E01.en (1).srt'));
+      expect(resolution.renamed, isTrue);
+    });
+  });
+
   group('ConversionOptions', () {
     test('defaults to source folder, no offset and auto rename', () {
       const ConversionOptions options =
@@ -158,6 +279,7 @@ void main() {
       expect(options.timeOffset, Duration.zero);
       expect(options.conflictPolicy, OutputConflictPolicy.autoRename);
       expect(options.writeUtf8Bom, isFalse);
+      expect(options.stripMediaSuffix, isFalse);
       expect(options.validationError(), isNull);
     });
 

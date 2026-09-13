@@ -58,10 +58,49 @@ class OutputPathResolver {
   /// directory listing.
   static const int maxAutoRenameAttempts = 500;
 
+  /// File extensions recognized as "belongs to a media file" when
+  /// [stripMediaSuffix] is on. Curated common audio and video containers;
+  /// anything else (a language tag such as `.en`, or another subtitle
+  /// extension) is left alone. The list is the single source of truth: the
+  /// READMEs quote it verbatim.
+  static const Set<String> mediaExtensions = <String>{
+    // Audio containers.
+    'aac', 'ape', 'flac', 'm4a', 'mp3', 'oga', 'ogg', 'opus', 'wav', 'wma',
+    // Video containers.
+    'avi', 'flv', 'm4v', 'mkv', 'mov', 'mp4', 'mpeg', 'mpg', 'ts', 'webm',
+    'wmv',
+  };
+
+  /// Drops one trailing media extension from a file base name, matched
+  /// case-insensitively: `E01.wav` becomes `E01`.
+  ///
+  /// Returns [base] unchanged when it does not end in a [mediaExtensions]
+  /// member, or when stripping would leave an empty name (`E01` names such as
+  /// `.wav` are kept whole).
+  static String withoutMediaSuffix(String base) {
+    final int dot = base.lastIndexOf('.');
+    if (dot <= 0) {
+      return base;
+    }
+    final String suffix = base.substring(dot + 1).toLowerCase();
+    return mediaExtensions.contains(suffix) ? base.substring(0, dot) : base;
+  }
+
   /// Builds the plain output file name for [sourcePath] converted to
   /// [targetFormat], keeping the source directory.
-  static String targetFileName(String sourcePath, SubtitleFormat targetFormat) {
-    final String base = p.basenameWithoutExtension(sourcePath);
+  ///
+  /// With [stripMediaSuffix], a trailing media extension on the source base
+  /// name is dropped first, so `E01.wav.vtt` converts to LRC as `E01.lrc`
+  /// instead of `E01.wav.lrc`.
+  static String targetFileName(
+    String sourcePath,
+    SubtitleFormat targetFormat, {
+    bool stripMediaSuffix = false,
+  }) {
+    String base = p.basenameWithoutExtension(sourcePath);
+    if (stripMediaSuffix) {
+      base = withoutMediaSuffix(base);
+    }
     return '$base.${targetFormat.extension}';
   }
 
@@ -69,6 +108,8 @@ class OutputPathResolver {
   ///
   /// [directory] is the folder outputs go to (the source folder or a custom
   /// one). [exists] must report whether a path is already taken.
+  /// [stripMediaSuffix] drops a media-name suffix from the base name before
+  /// the target extension is appended (see [targetFileName]).
   ///
   /// The source file itself is never a valid output path: when [sourcePath]
   /// and the resolved path are the same file, the name is always changed, even
@@ -80,8 +121,13 @@ class OutputPathResolver {
     required SubtitleFormat targetFormat,
     required OutputConflictPolicy policy,
     required bool Function(String path) exists,
+    bool stripMediaSuffix = false,
   }) {
-    final String fileName = targetFileName(sourcePath, targetFormat);
+    final String fileName = targetFileName(
+      sourcePath,
+      targetFormat,
+      stripMediaSuffix: stripMediaSuffix,
+    );
     final String requested = p.join(directory, fileName);
 
     final bool collidesWithSource = _isSameFile(requested, sourcePath);

@@ -53,6 +53,7 @@ void main() {
     OutputConflictPolicy policy = OutputConflictPolicy.autoRename,
     Duration timeOffset = Duration.zero,
     bool writeUtf8Bom = false,
+    bool stripMediaSuffix = false,
   }) {
     return ConversionOptions(
       targetFormat: target,
@@ -61,6 +62,7 @@ void main() {
       conflictPolicy: policy,
       timeOffset: timeOffset,
       writeUtf8Bom: writeUtf8Bom,
+      stripMediaSuffix: stripMediaSuffix,
     );
   }
 
@@ -338,6 +340,29 @@ void main() {
         ),
       );
       expect(read(File(result.outputPath!)), contains('00:00:02,000'));
+    });
+
+    test('strips a media suffix from the output name when asked to', () async {
+      const String vtt =
+          'WEBVTT\n'
+          '\n'
+          '00:00:01.000 --> 00:00:03.000\n'
+          'Hello\n';
+      final File source = writeSource('AAAA.wav.vtt', content: vtt);
+
+      final ConversionResult withoutOption = await service.convertFile(
+        source.path,
+        options(target: SubtitleFormat.lrc),
+      );
+      expect(p.basename(withoutOption.outputPath!), 'AAAA.wav.lrc');
+
+      final ConversionResult result = await service.convertFile(
+        source.path,
+        options(target: SubtitleFormat.lrc, stripMediaSuffix: true),
+      );
+      expect(p.basename(result.outputPath!), 'AAAA.lrc');
+      expect(File(result.outputPath!).existsSync(), isTrue);
+      expect(read(File(result.outputPath!)), contains('[00:01.00]Hello'));
     });
   });
 

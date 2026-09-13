@@ -42,6 +42,7 @@ class ConversionOptions {
     this.timeOffset = Duration.zero,
     this.conflictPolicy = OutputConflictPolicy.autoRename,
     this.writeUtf8Bom = false,
+    this.stripMediaSuffix = false,
   });
 
   final SubtitleFormat targetFormat;
@@ -58,6 +59,13 @@ class ConversionOptions {
 
   /// Whether output starts with a UTF-8 BOM. Output is always UTF-8.
   final bool writeUtf8Bom;
+
+  /// Whether to drop a media-name suffix from the output base name, e.g.
+  /// `E01.wav.vtt` converting to LRC writes `E01.lrc` instead of
+  /// `E01.wav.lrc`. What counts as a media suffix is decided by
+  /// `OutputPathResolver.mediaExtensions`; the model stays display- and
+  /// format-free.
+  final bool stripMediaSuffix;
 
   /// True when [outputLocation] is [OutputLocation.customDirectory] but no
   /// usable folder was chosen. The UI maps this to a localized message
@@ -87,6 +95,7 @@ class ConversionOptions {
     Duration? timeOffset,
     OutputConflictPolicy? conflictPolicy,
     bool? writeUtf8Bom,
+    bool? stripMediaSuffix,
   }) {
     return ConversionOptions(
       targetFormat: targetFormat ?? this.targetFormat,
@@ -97,6 +106,7 @@ class ConversionOptions {
       timeOffset: timeOffset ?? this.timeOffset,
       conflictPolicy: conflictPolicy ?? this.conflictPolicy,
       writeUtf8Bom: writeUtf8Bom ?? this.writeUtf8Bom,
+      stripMediaSuffix: stripMediaSuffix ?? this.stripMediaSuffix,
     );
   }
 
@@ -104,7 +114,8 @@ class ConversionOptions {
   String toString() =>
       'ConversionOptions(target: ${targetFormat.label}, '
       'location: ${outputLocation.name}, offset: $timeOffset, '
-      'conflict: ${conflictPolicy.name})';
+      'conflict: ${conflictPolicy.name}, '
+      'stripMediaSuffix: $stripMediaSuffix)';
 }
 
 /// Outcome of processing one file.
