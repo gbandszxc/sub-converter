@@ -167,9 +167,12 @@ static void my_application_activate(GApplication* application) {
 
   // App-lifetime channel answering the Dart side's font questions; both the
   // channel and the handler stay registered until the process exits.
-  FlMethodChannel* font_channel =
-      fl_method_channel_new(fl_view_get_messenger(view), "sub_converter/fonts",
-                            FL_METHOD_CODEC(fl_standard_method_codec_new()));
+  // fl_view_get_messenger() does not exist in the public embedder API; the
+  // documented route to the view's messenger goes through its engine.
+  FlMethodChannel* font_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)),
+      "sub_converter/fonts",
+      FL_METHOD_CODEC(fl_standard_method_codec_new()));
   fl_method_channel_set_method_call_handler(font_channel,
                                             font_channel_handler, window,
                                             nullptr);
