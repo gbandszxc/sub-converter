@@ -137,6 +137,14 @@ mkdir -p "$StageDir"
 # COPYFILE_DISABLE keeps cp from writing AppleDouble ._ sidecar files into the
 # image, which would otherwise show up next to the app in the mounted window.
 COPYFILE_DISABLE=1 cp -R "$AppPath" "$StageDir/"
+# Apache-2.0 section 4 asks for a copy of the licence in each binary
+# distribution, and the image is how the app reaches macOS users.
+LicenseFile="$RepoRoot/LICENSE"
+if [ ! -f "$LicenseFile" ]; then
+    echo "LICENSE not found at $LicenseFile" >&2
+    exit 1
+fi
+COPYFILE_DISABLE=1 cp "$LicenseFile" "$StageDir/LICENSE.txt"
 ln -s /Applications "$StageDir/Applications"
 
 DmgPath="$OutDir/$PackageName-$Version.dmg"

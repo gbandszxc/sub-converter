@@ -55,12 +55,15 @@ the Flutter build tree. Both live under `build/`, which is git-ignored.
 
 ## What is in the image
 
-Mounting the DMG shows exactly two items, which is what makes the window work as
+Mounting the DMG shows three items, which is what makes the window work as
 drag-to-install:
 
 - `Subtitle Converter.app` — a universal binary (`x86_64` + `arm64`), macOS 12.0
   or later.
 - `Applications` → `/Applications`
+- `LICENSE.txt` — the Apache-2.0 text, copied into the staging folder by the
+  script so the image carries a copy of the licence (section 4 of the licence).
+  It is named `.txt` so a double click opens it in TextEdit.
 
 The product is located by scanning `build/macos/Build/Products/<Configuration>/`
 for `*.app` rather than hardcoding the name, so renaming the app in
