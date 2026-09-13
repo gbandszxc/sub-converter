@@ -1,14 +1,11 @@
-# AGENTS.md — 开发与维护规约
+# AGENTS.md
 
-面向在本仓库工作的 agent（和人类协作者）。**本文只做索引与约定**：项目是什么、命令在哪、
-文档在哪、什么时候必须同步维护。
-
-## 1. 项目一句话
+## 项目概括
 
 纯 Flutter 桌面的本地字幕格式转换器（SRT / VTT / LRC / ASS / SSA / SBV 互转），核心是
 纯 Dart，无网络、无外部进程、无后端。
 
-## 2. 环境与常用命令
+## 环境与常用命令
 
 `flutter` 需在 `PATH` 上。约定版本：Flutter 3.47.4 stable / Dart 3.13.3（`pubspec.yaml`
 要求 `sdk: ^3.13.3`）。
@@ -42,7 +39,7 @@ packaging/macos/build-dmg.sh
 三平台 CI（测试 + release 构建 + 启动产物）定义在 `.github/workflows/ci.yml`，push 到 `main`
 即触发。
 
-## 3. 硬性约定（改动前确认不会破坏）
+## 硬性约定（改动前确认不会破坏）
 
 | 约定 | 说明 | 由什么守住 |
 |---|---|---|
@@ -77,9 +74,9 @@ packaging/macos/build-dmg.sh
 `docs:` / `build(msi):` / `build(dmg):` / `chore:`），一个任务一个提交；长流程分批提交，
 不要最后攒一块。
 
-## 4. 文档地图与同步义务
+## 文档地图与同步义务
 
-### 4.1 必须与代码同步维护（漂移会误导用户或后续 agent）
+### 必须与代码同步维护（漂移会误导用户或后续 agent）
 
 | 文档 | 内容 | 何时必须更新 |
 |---|---|---|
@@ -94,11 +91,11 @@ packaging/macos/build-dmg.sh
 
 > 约定：文档里出现的数字与清单，宁可从代码/命令抄，也不要凭记忆写。
 
-## 5. 容易漂移的具体事实（改代码时顺手核对）
+## 容易漂移的具体事实（改代码时顺手核对）
 
 这些是「同一事实被写在多处」的高风险项：
 
-1. **测试数量** —— 出现在 `README.md`、`README.zh-CN.md`、`AGENTS.md` 第 2 节。
+1. **测试数量** —— 出现在 `README.md`、`README.zh-CN.md`、`AGENTS.md`「环境与常用命令」一节。
    校验：`flutter test` 结尾行的数字。
 2. **每格式的保留/丢弃清单** —— 两份 README 的表 + 各 writer 的 doc comment。
    校验：读 `lib/formats/*/*_writer.dart` 顶部注释。
@@ -120,7 +117,7 @@ packaging/macos/build-dmg.sh
     覆盖段、`docs/ARCHITECTURE.md` 的 Input resolution 段、`lib/services/file_service.dart` 的
     `expandPaths` doc comment。校验：`test/services/file_service_test.dart`。
 
-## 6. 提交前自检
+## 提交前自检
 
 ```bash
 flutter analyze   # 0 issue
