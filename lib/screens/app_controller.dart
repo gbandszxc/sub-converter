@@ -181,11 +181,13 @@ class AppController extends ChangeNotifier {
 
   /// Adds every path that is not already present.
   ///
-  /// Folder paths are expanded first by [FileService.expandPaths]: a dropped
-  /// folder contributes the subtitle files it holds, not a single row that
-  /// cannot be read. Duplicates are detected on the normalized absolute path,
-  /// compared case-insensitively on Windows. Inspection runs per file and never
-  /// blocks or fails the others.
+  /// The paths are resolved first by [FileService.expandPaths], which decides
+  /// what may enter the list: a dropped folder contributes the subtitle files it
+  /// holds rather than one unreadable row, and a file that declares a
+  /// non-subtitle type (audio, video, images, documents) is left out entirely.
+  /// Duplicates are detected on the normalized absolute path, compared
+  /// case-insensitively on Windows. Inspection runs per file and never blocks or
+  /// fails the others.
   Future<void> addPaths(Iterable<String> paths) async {
     final List<String> resolved = await _fileService.expandPaths(paths);
     final List<SubtitleFileEntry> added = <SubtitleFileEntry>[];

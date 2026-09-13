@@ -212,14 +212,17 @@ void main() {
 
     await controller.addPaths(<String>[good.path, broken.path, notes.path]);
     await settleInspection(controller);
+    // notes.txt declares a type this converter does not read, so it never joins
+    // the list; the batch still has to carry on past the unparsable .srt.
+    expect(controller.fileCount, 2);
+    expect(controller.entries[0].detectedFormat, SubtitleFormat.srt);
     expect(controller.entries[1].detectedFormat, SubtitleFormat.srt);
-    expect(controller.entries[2].detectedFormat, isNull);
 
     await controller.convertAll();
 
     expect(controller.successCount, 1);
-    expect(controller.failureCount, 2);
-    expect(controller.completedCount, 3);
+    expect(controller.failureCount, 1);
+    expect(controller.completedCount, 2);
     expect(controller.hasBatchSummary, isTrue);
 
     for (final SubtitleFileEntry entry in controller.entries.skip(1)) {
@@ -454,19 +457,25 @@ void main() {
     expect(File(p.join(workspace.path, 'subtitles.vtt')).existsSync(), isTrue);
   });
 
-  test('a file with no usable content or extension is unsupported', () async {
-    final File notes = writeText('notes', 'a plain text file, not subtitles\n');
+  test('files that declare a non-subtitle type never join the list', () async {
+    final File notes = writeText(
+      'notes.txt',
+      'a plain text file, not subtitles\n',
+    );
+    final File video = File(p.join(workspace.path, 'episode.mp4'))
+      ..writeAsBytesSync(<int>[0x00, 0x00, 0x00, 0x18]);
     final AppController controller = controllerFor(target: SubtitleFormat.vtt);
-    await controller.addPaths(<String>[notes.path]);
+
+    await controller.addPaths(<String>[notes.path, video.path]);
     await settleInspection(controller);
-    expect(controller.entries.single.detectedFormat, isNull);
+
+    expect(controller.entries, isEmpty);
+    expect(controller.canConvert, isFalse);
 
     await controller.convertAll();
-    expect(controller.failureCount, 1);
-    expect(
-      controller.entries.single.result!.failure,
-      ConversionFailure.unsupportedFormat,
-    );
+    expect(controller.successCount, 0);
+    expect(controller.failureCount, 0);
+    expect(File(p.join(workspace.path, 'notes.vtt')).existsSync(), isFalse);
   });
 
   test('every fixture format converts to every other format on disk', () async {

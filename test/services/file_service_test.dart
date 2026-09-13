@@ -157,18 +157,52 @@ void main() {
       ]);
     });
 
-    test('passes file paths through unchanged, unknown formats included',
-        () async {
+    test('drops files whose name declares a non-subtitle type', () async {
       final File source = writeSource('E01.srt');
-      final String unknown = p.join(workspace.path, 'movie.mkv');
 
       final List<String> paths = await service.expandPaths(<String>[
         source.path,
-        '  ${source.path}  ',
-        unknown,
+        p.join(workspace.path, 'movie.mkv'),
+        p.join(workspace.path, 'track.flac'),
+        p.join(workspace.path, 'cover.jpg'),
+        p.join(workspace.path, 'notes.txt'),
+        p.join(workspace.path, '.gitignore'),
+        p.join(workspace.path, '.DS_Store'),
       ]);
 
-      expect(paths, <String>[source.path, source.path, unknown]);
+      expect(paths, <String>[source.path]);
+    });
+
+    test('keeps a name with no extension, since content decides later',
+        () async {
+      final File extensionless = File(p.join(workspace.path, 'subtitles'))
+        ..writeAsStringSync(sampleSrt);
+
+      final List<String> paths = await service.expandPaths(<String>[
+        extensionless.path,
+        '  ${extensionless.path}  ',
+      ]);
+
+      expect(paths, <String>[extensionless.path, extensionless.path]);
+    });
+
+    test('a folder is recognized by type, not by its name', () async {
+      final Directory folder = Directory(p.join(workspace.path, 'Season 1'))
+        ..createSync();
+      File(p.join(folder.path, 'E01.srt')).writeAsStringSync(sampleSrt);
+      File(p.join(folder.path, 'EPISODE 01.MKV.mp3'))
+          .writeAsBytesSync(<int>[0x49, 0x44, 0x33]);
+      // A folder named like a video is still a folder.
+      final Directory mediaNamed = Directory(p.join(workspace.path, 'Extra.mp4'))
+        ..createSync();
+      File(p.join(mediaNamed.path, 'E02.ass')).writeAsStringSync(sampleSrt);
+
+      final List<String> paths = await service.expandPaths(<String>[
+        folder.path,
+        mediaNamed.path,
+      ]);
+
+      expect(paths.map(p.basename).toList(), <String>['E01.srt', 'E02.ass']);
     });
 
     test('folders with nothing to show contribute nothing, nor do blanks',

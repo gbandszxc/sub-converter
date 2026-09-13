@@ -33,7 +33,8 @@ flutter run -d windows     # or: -d macos, -d linux
 ```
 
 Add files by dragging them onto the window — dropping a folder adds the subtitle files it contains
-one level deep — pressing `Ctrl+O`, or using the Add button.
+one level deep, and audio, video and other non-subtitle files are never added — pressing `Ctrl+O`,
+or using the Add button.
 `Ctrl+Enter` starts the batch. On startup the app restores the options you used last time.
 
 ### Build a release binary
@@ -187,7 +188,7 @@ valid UTF-8. Detection failures are reported per file rather than guessed throug
 flutter test
 ```
 
-The suite currently contains **379 tests, all passing**. Coverage:
+The suite currently contains **381 tests, all passing**. Coverage:
 
 - **Core**: timestamp parse/format rules, the unified model (`SubtitleDocument`/`SubtitleCue`), and the shared inline-markup scanner.
 - **Formats**: dedicated parser/writer tests for each of SRT, VTT, LRC, ASS, SSA and SBV, exercised against real fixtures (including CJK and tag-heavy files).
@@ -195,7 +196,7 @@ The suite currently contains **379 tests, all passing**. Coverage:
 - **Encoding**: BOM handling, UTF-16/UTF-32 detection, ASCII/CJK/SJIS/GBK/GB18030 cases, Windows-1252 fallback and failure behavior.
 - **Path and file safety**: conflict policies, media-suffix stripping and the "never overwrite
   the source" rule; batch conversion, progress and per-file failures.
-- **UI/controller**: `AppController` state and persistence, widget tests for the home screen, the language and font pickers, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, a dropped folder expanded to the subtitle files inside it, empty paths ignored, duplicates collapsed).
+- **UI/controller**: `AppController` state and persistence, widget tests for the home screen, the language and font pickers, and drag-and-drop tests that drive the window's real `DropTarget` callback (multi-file drops, a dropped folder expanded to the subtitle files inside it, files that declare an audio/video/other non-subtitle type left out, empty paths ignored, duplicates collapsed).
 - **App font**: per-platform default families, desktop overrides, fallback chains, persistence, and the picker's behavior with fonts that are not installed.
 - **End to end**: the real `FileService` and `AppController` against real files on disk, including the full all-format matrix.
 

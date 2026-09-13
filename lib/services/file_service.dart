@@ -72,17 +72,22 @@ class FileService {
 
   /// Expands a mixed list of file and folder paths into subtitle file paths.
   ///
-  /// A file path passes through unchanged, so an unrecognized one still becomes
-  /// a row and conversion reports the real error. A folder that exists is
-  /// scanned one level deep and yields its direct files whose name carries a
-  /// registered subtitle extension (the registry's lookup, so aliases such as
-  /// `.subrip` count); nested folders are not descended into, because reading
-  /// every file of a media library just to list it would be wasteful.
+  /// Only subtitle files get through, so a drop never fills the list with the
+  /// audio, video, image or document files that share a folder with them. A
+  /// file qualifies when its name carries a registered subtitle extension (the
+  /// registry's lookup, so aliases such as `.subrip` count) or declares no
+  /// extension at all — an extensionless name claims nothing, so it stays a
+  /// candidate and inspection identifies it from its content. Everything else
+  /// (`movie.mkv`, `track.flac`, `cover.jpg`, `notes.txt`) is left out.
   ///
-  /// The result keeps the input order, with each folder's files sorted by file
-  /// name so the list is stable across the order the OS happens to return. A
-  /// folder that holds nothing recognizable — or that cannot be listed —
-  /// contributes nothing rather than failing the whole drop.
+  /// A folder that exists is scanned one level deep and yields its direct files
+  /// with a registered subtitle extension; nested folders are not descended
+  /// into, and the folder's contents are never read, because probing every file
+  /// of a media library just to list it would be wasteful. The result keeps the
+  /// input order, with each folder's files sorted by file name so the list is
+  /// stable across the order the OS happens to return. A folder that holds
+  /// nothing recognizable — or that cannot be listed — contributes nothing
+  /// rather than failing the whole drop.
   Future<List<String>> expandPaths(Iterable<String> paths) async {
     final List<String> expanded = <String>[];
     for (final String raw in paths) {
@@ -92,11 +97,32 @@ class FileService {
       }
       if (await _isDirectory(path)) {
         expanded.addAll(await _subtitleFilesIn(path));
-      } else {
+      } else if (_isSubtitleName(path)) {
         expanded.add(path);
       }
     }
     return expanded;
+  }
+
+  /// True when [path]'s name alone allows it to be a subtitle: it either
+  /// declares a registered subtitle extension or has no dot at all, which
+  /// leaves the content to decide.
+  bool _isSubtitleName(String path) {
+    final String extension = _extensionOf(path);
+    return extension.isEmpty ||
+        registry.descriptorForExtension(extension) != null;
+  }
+
+  /// The lowercase extension of [path] without its dot, or an empty string when
+  /// the name has no dot at all (`subtitles`, `README`). A leading dot is the
+  /// name's own suffix, so `.gitignore` reports `gitignore`.
+  static String _extensionOf(String path) {
+    final String name = p.basename(path).toLowerCase();
+    final int dot = name.lastIndexOf('.');
+    if (dot < 0) {
+      return '';
+    }
+    return name.substring(dot + 1);
   }
 
   /// True when [path] names an existing folder. A path that is missing, names a
@@ -111,8 +137,10 @@ class FileService {
 
   /// Direct subtitle files inside [directory], sorted by file name.
   ///
-  /// Only the folder's own entries are read; an unreadable folder yields
-  /// whatever it listed before the error instead of throwing.
+  /// Names only: no file's content is read, so the extension has to decide here
+  /// and an extensionless subtitle inside a folder is not picked up (drop that
+  /// file on its own and its content identifies it). An unreadable folder
+  /// yields whatever it listed before the error instead of throwing.
   Future<List<String>> _subtitleFilesIn(String directory) async {
     final List<String> matches = <String>[];
     try {

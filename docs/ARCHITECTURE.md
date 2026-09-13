@@ -48,19 +48,26 @@ The encoding service does not use the file name.
 
 ### Input resolution
 
-Before a path enters the pipeline, `FileService.expandPaths` resolves what the user handed over.
-A path that names a file passes through unchanged — an unrecognized one still becomes a row, so
-conversion reports the real error. A path that names a folder is scanned **one level deep** and
-contributes its direct files whose name carries a registered subtitle extension (the registry's
-lookup, so aliases such as `.subrip` count), sorted by file name for a stable list. Nested folders
-are not descended into, and a folder that holds nothing recognizable — or that cannot be listed —
-contributes nothing instead of failing the drop.
+Before a path enters the pipeline, `FileService.expandPaths` resolves what the user handed over,
+so the list only ever holds subtitles. A file qualifies when its name carries a registered subtitle
+extension (the registry's lookup, so aliases such as `.subrip` count) or declares no extension at
+all — an extensionless name claims nothing, so it stays a candidate and inspection identifies it
+from its content. A declared non-subtitle type (`movie.mkv`, `track.flac`, `cover.jpg`, `notes.txt`)
+is left out without reading a byte of it, which is what keeps a dropped video from filling the list
+and from being pulled into memory.
+
+A path that names a folder is scanned **one level deep** and contributes its direct files with a
+registered subtitle extension, sorted by file name for a stable list. Names only: the folder's
+contents are never read, so an extensionless subtitle inside a folder is not picked up (dropping
+that file on its own identifies it by content, and this is what keeps a large media folder cheap to
+list). Nested folders are not descended into, and a folder that holds nothing recognizable — or
+that cannot be listed — contributes nothing instead of failing the drop.
 
 `AppController.addPaths` is the single entry point for both the picker and a drop, so the UI never
-decides what a folder means. The folder check asks the file system rather than the drop item type:
-`desktop_drop` reports a dropped folder as a plain path on Windows and Linux, and only macOS
-delivers a `DropItemDirectory` (whose `children` are always empty), so the item type alone would
-miss the common case.
+decides what a folder means or which names count. The folder check asks the file system rather than
+the drop item type: `desktop_drop` reports a dropped folder as a plain path on Windows and Linux,
+and only macOS delivers a `DropItemDirectory` (whose `children` are always empty), so the item type
+alone would miss the common case.
 
 ## Layering
 

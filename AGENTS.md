@@ -17,7 +17,7 @@
 ```bash
 flutter pub get
 flutter analyze                  # 必须 "No issues found!"（0 issue）
-flutter test                     # 必须全绿；当前 379 个测试
+flutter test                     # 必须全绿；当前 381 个测试
 flutter build windows --release  # 产物 build\windows\x64\runner\Release\
 flutter build macos   --release
 flutter build linux   --release
@@ -50,7 +50,7 @@ packaging/macos/build-dmg.sh
 | Parser / Writer 必须是纯 Dart | 不得 import Flutter、不得做 IO、不得 `print`；只做字符串进出 | `lib/models/subtitle_codec.dart` 的接口 + 审查 |
 | UI 不含字幕知识 | `lib/screens`、`lib/widgets` 不得 import `formats/**`；转换只经 `FileService` | 审查（`grep -rn "formats/" lib/screens lib/widgets` 应为空） |
 | 只有一个 IO 边界 | 文件读写与目录展开只在 `lib/services/file_service.dart`；其余地方不得读写磁盘（`lib/screens/app_controller.dart` 也 import 了 `dart:io`，但仅用于 `Platform.isWindows` 判断路径大小写） | 审查（`grep -rn "dart:io" lib/` 应只命中这两处） |
-| 拖入的目录只展开一级 | 目录→字幕文件的展开只在 `FileService.expandPaths`：只取该目录的直接子文件，按注册表中的扩展名（含 alias）过滤，按文件名排序，不递归、不读文件内容；判定目录靠文件系统而不是拖放项的 `DropItem` 类型（Windows 上插件把目录当普通路径上报）；列目录失败必须静默返回已列出的部分 | `test/services/file_service_test.dart`、`test/widget/drag_drop_test.dart` |
+| 入列表的只可能是字幕文件 | `FileService.expandPaths` 是唯一决定「什么能进列表」的地方：文件名带已注册字幕扩展名（含 alias），**或**完全不带扩展名（此时交给内容识别），才入列表；声明了其他类型（音频、视频、图片、文档等）的文件既不进列表也不被读取。目录→字幕文件的展开同样只在这里：只取该目录的直接子文件，按已注册扩展名过滤，按文件名排序，不递归、不读文件内容；判定目录靠文件系统而不是拖放项的 `DropItem` 类型（Windows 上插件把目录当普通路径上报）；列目录失败必须静默返回已列出的部分 | `test/services/file_service_test.dart`、`test/widget/drag_drop_test.dart`、`test/integration/end_to_end_test.dart` |
 | 平台通道只在 `lib/platform/` | 向 OS 查询系统字体（枚举 + 默认字体）走唯一的 `sub_converter/fonts` 通道：Dart 侧包装在 `lib/platform/system_fonts.dart`，策略（各平台默认字体与回退链）在纯 Dart 的 `lib/platform/app_typography.dart`，原生实现在三个 runner 内。查询失败必须静默降级到策略默认值，不得抛出 | `test/platform/app_typography_test.dart`、`test/widget/font_settings_test.dart` |
 | 绝不修改源文件 | `OutputPathResolver` 在任何策略下都拒绝把源文件当输出路径（含 overwrite） | `test/services/output_path_resolver_test.dart` |
 | 媒体后缀剥离只认媒体扩展名 | 「去除媒体后缀」默认关闭；开启后仅当文件名主干以 `OutputPathResolver.mediaExtensions` 中的扩展名结尾时才去除（`AAAA.wav.vtt` → `AAAA.lrc`），语言标签等非媒体后缀不动，剥空主干被拒绝；冲突处理与源文件保护都作用于剥离后的名字 | `test/services/output_path_resolver_test.dart`、`test/services/file_service_test.dart` |
@@ -118,9 +118,10 @@ packaging/macos/build-dmg.sh
 9. **默认字体清单**（Windows 微软雅黑 / macOS 苹方 / Linux 桌面字体，及 CJK 回退链）—— 两份
    README 的「字体」段与 `lib/platform/app_typography.dart`；原生查询实现在三个 runner，见
    `docs/ARCHITECTURE.md` 的 System fonts 段。校验：`test/platform/app_typography_test.dart`。
-10. **拖入目录的行为**（只展开一级、按已注册扩展名过滤、不递归）—— 两份 README 的使用段与测试
-    覆盖段、`docs/ARCHITECTURE.md` 的 Input resolution 段、`lib/services/file_service.dart` 的
-    `expandPaths` doc comment。校验：`test/services/file_service_test.dart`。
+10. **入列表的规则**（文件：已注册扩展名或无扩展名；目录：只展开一级、只认已注册扩展名、不递归）
+    —— 两份 README 的使用段与测试覆盖段、`docs/ARCHITECTURE.md` 的 Input resolution 段、
+    `lib/services/file_service.dart` 的 `expandPaths` doc comment。校验：
+    `test/services/file_service_test.dart`、`test/integration/end_to_end_test.dart`。
 11. **媒体后缀扩展名清单** —— 两份 README 的「去除媒体后缀」说明与
     `OutputPathResolver.mediaExtensions`（逐字对应）。校验：
     `test/services/output_path_resolver_test.dart`。
@@ -129,7 +130,7 @@ packaging/macos/build-dmg.sh
 
 ```bash
 flutter analyze   # 0 issue
-flutter test      # 全绿（当前 379）
+flutter test      # 全绿（当前 381）
 ```
 
 - [ ] 若改动用户可见行为 → 更新两份 README；涉及打包 → 更新 `packaging/msi/README.md`
