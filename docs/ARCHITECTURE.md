@@ -251,6 +251,13 @@ writes. It checks the output's parent directory exists and writes with `flush: t
 files are only ever opened for reading. Conversion happens on a copy of the parsed document
 (`document.copy()..shift(offset)`), so the input text is never mutated.
 
+On macOS the App Sandbox sits in front of all of this: `macos/Runner/Release.entitlements` and
+`macos/Runner/DebugProfile.entitlements` must both keep
+`com.apple.security.files.user-selected.read-write`. `file_selector` can show its panel without
+it, but the sandbox then denies every path the user picks — no file can be added and no output
+written. Flutter's macOS guide asks for that entitlement explicitly and for the two files to
+stay identical.
+
 ## Error model
 
 `lib/models/subtitle_exception.dart` defines `ConversionFailure`, the user-facing reason enum:
