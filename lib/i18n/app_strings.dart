@@ -76,6 +76,11 @@ abstract class AppStrings {
   String get fontSystemDefaultHelp;
   String get convert;
 
+  String get exitConfirmTitle;
+  String get exitConfirmBody;
+  String get exitConfirmExit;
+  String get exitConfirmCancel;
+
   /// `Convert 1 file` / `Convert 3 files`.
   String convertWithCount(int count);
 

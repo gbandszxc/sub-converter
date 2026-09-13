@@ -105,8 +105,11 @@ Rules:
   and unit-testable without a temporary directory.
 - **`lib/platform` is the only platform-channel seam.** System fonts are asked over one method
   channel (`sub_converter/fonts`) implemented in each runner; the typography *policy* stays
-  pure Dart (`AppTypography`). No Dart code outside `FileService` reads the file system, and
-  `lib/models`, `lib/formats` and `lib/services` keep zero Flutter imports.
+  pure Dart (`AppTypography`). Window close interception goes through `WindowCloseChannel`,
+  the single Dart wrapper around the `window_manager` plugin, and degrades to the default
+  close behavior wherever the plugin is unavailable (tests, headless hosts). No Dart code
+  outside `FileService` reads the file system, and `lib/models`, `lib/formats` and
+  `lib/services` keep zero Flutter imports.
 - **Dependencies point downward.** No service imports a screen; no parser imports a service.
 - **Only the UI knows the locale.** `lib/i18n` is imported by `lib/main.dart`, `lib/screens`
   and `lib/widgets` and by nothing below them. `lib/models`, `lib/formats` and
@@ -196,6 +199,7 @@ Adding a format starts here.
 | Persistence seam | `lib/services/settings_store.dart` |
 | App font policy (defaults, fallback chains) | `lib/platform/app_typography.dart` |
 | System font queries (installed list, desktop default) | `lib/platform/system_fonts.dart` plus each platform runner |
+| Window close interception (exit confirmation) | `lib/platform/window_close.dart` over the `window_manager` plugin |
 | UI strings, language choice | `lib/i18n/` (`strings_en.dart`, `strings_zh.dart`, `app_strings.dart`, `app_language.dart`) |
 
 Shared code is factored so dialects and formats do not duplicate each other: `ass/` holds one

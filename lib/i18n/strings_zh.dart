@@ -106,6 +106,18 @@ class AppStringsZh extends AppStrings {
   String get convert => '开始转换';
 
   @override
+  String get exitConfirmTitle => '退出 Subtitle Converter？';
+
+  @override
+  String get exitConfirmBody => '窗口将关闭，仍在进行的转换会被中止。';
+
+  @override
+  String get exitConfirmExit => '退出';
+
+  @override
+  String get exitConfirmCancel => '取消';
+
+  @override
   String convertWithCount(int count) => '转换 $count 个文件';
 
   @override

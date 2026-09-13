@@ -136,6 +136,10 @@ the source. Settings (target format, output location, chosen folder, conflict po
 BOM, media-suffix stripping, language, font) are persisted with `shared_preferences` and
 restored between runs.
 
+**Exit confirmation.** Closing the window — the title bar X, Alt+F4, or the taskbar Close —
+shows a confirmation dialog first, so a running conversion is not cut off by accident. The
+dialog follows the interface language; only confirming it actually quits.
+
 **Strip media suffix.** Some subtitles are named after the media file they belong to, e.g.
 `AAAA.wav.vtt`. By default converting that file to LRC writes `AAAA.wav.lrc`; with this option
 on, the inner media extension is dropped and the output is `AAAA.lrc`. It applies to every
@@ -188,7 +192,7 @@ valid UTF-8. Detection failures are reported per file rather than guessed throug
 flutter test
 ```
 
-The suite currently contains **383 tests, all passing**. Coverage:
+The suite currently contains **386 tests, all passing**. Coverage:
 
 - **Core**: timestamp parse/format rules, the unified model (`SubtitleDocument`/`SubtitleCue`), and the shared inline-markup scanner.
 - **Formats**: dedicated parser/writer tests for each of SRT, VTT, LRC, ASS, SSA and SBV, exercised against real fixtures (including CJK and tag-heavy files).

@@ -5,8 +5,10 @@ import 'i18n/app_language.dart';
 import 'i18n/app_strings.dart';
 import 'i18n/strings_scope.dart';
 import 'platform/app_typography.dart';
+import 'platform/window_close.dart';
 import 'screens/app_controller.dart';
 import 'screens/home_screen.dart';
+import 'widgets/exit_confirm_dialog.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +29,17 @@ class SubtitleConverterApp extends StatefulWidget {
 class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
   late final AppController _controller = widget.controller ?? AppController();
   late final bool _ownsController = widget.controller == null;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final WindowCloseChannel _closeChannel = WindowCloseChannel();
+  bool _exitDialogOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ask before the user closes the window. Degrades to the default close
+    // behavior when the plugin is unavailable (tests, headless hosts).
+    _closeChannel.interceptClose(_showExitConfirm);
+  }
 
   @override
   void dispose() {
@@ -66,11 +79,45 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
             debugShowCheckedModeBanner: false,
             theme: _themeFor(Brightness.light),
             darkTheme: _themeFor(Brightness.dark),
+            navigatorKey: _navigatorKey,
             home: HomeScreen(controller: _controller),
           ),
         );
       },
     );
+  }
+
+  /// Shows the bilingual quit confirmation, then closes for real on exit.
+  ///
+  /// The strings resolve the same way `build` does: the user's pick, else the
+  /// platform locale.
+  Future<void> _showExitConfirm() async {
+    if (_exitDialogOpen) {
+      return;
+    }
+    final NavigatorState? navigator = _navigatorKey.currentState;
+    if (navigator == null) {
+      // Nothing to confirm against (window torn down before the first frame);
+      // honor the close request instead of leaving a zombie window.
+      await _closeChannel.closeNow();
+      return;
+    }
+    _exitDialogOpen = true;
+    final Locale platformLocale =
+        WidgetsBinding.instance.platformDispatcher.locale;
+    final AppStrings strings = AppStrings.forLanguage(
+      _controller.language.resolve(platformLocale),
+    );
+    await showDialog<void>(
+      context: navigator.context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => ExitConfirmDialog(
+        strings: strings,
+        onConfirm: () => _closeChannel.closeNow(),
+        onCancel: () {},
+      ),
+    );
+    _exitDialogOpen = false;
   }
 
   /// Builds the theme around the app font: the user's pick, else the

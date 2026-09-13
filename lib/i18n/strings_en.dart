@@ -111,6 +111,19 @@ class AppStringsEn extends AppStrings {
   String get convert => 'Convert';
 
   @override
+  String get exitConfirmTitle => 'Exit Subtitle Converter?';
+
+  @override
+  String get exitConfirmBody =>
+      'The window will close and any conversion still running will stop.';
+
+  @override
+  String get exitConfirmExit => 'Exit';
+
+  @override
+  String get exitConfirmCancel => 'Cancel';
+
+  @override
   String convertWithCount(int count) =>
       'Convert $count ${count == 1 ? 'file' : 'files'}';
 
