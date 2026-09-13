@@ -67,6 +67,12 @@ that is:
 Adding a plugin later needs no edit here: its DLL is picked up by the next
 harvest.
 
+One file is *not* harvested: the repository `LICENSE` is installed as
+`LICENSE.txt` through a hand-written component in `Product.wxs` (with a fixed
+GUID so upgrades recognise it), because Apache-2.0 section 4 requires recipients
+of a binary distribution to receive a copy of the licence. The build script
+passes its path in as `-dLicensePath` and fails if the file is missing.
+
 ## Installation behaviour
 
 - **Per-machine** install (`InstallScope="perMachine"`), x64 only.
@@ -104,7 +110,11 @@ msiexec /a sub-converter-0.1.0.msi /qn TARGETDIR=C:\Temp\extracted
 
 ## Licence text
 
-`license.rtf` is shown on the licence page. It currently states what the package
-installs, points at the bundled `NOTICES.Z` for third-party licence texts, and
-disclaims warranty. **Replace it with your own EULA before distributing the
-installer publicly.**
+The app is released under Apache-2.0, so `license.rtf` states that, links to the
+canonical text and points at the `LICENSE.txt` the installer drops next to the
+executable. It is shown on the licence page, which every interactive install
+passes through; the same text is what `/qn` silent installs accept implicitly.
+
+If the project ever changes licence, update three things together: the
+repository `LICENSE`, this `.rtf` (title, URL and the installed file name), and
+the licence section of both root READMEs.

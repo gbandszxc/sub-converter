@@ -213,6 +213,14 @@ try {
     }
     $candleCommon += "-dLicenseRtf=$licenseRtf"
 
+    # The same Apache-2.0 text shipped inside the package, so recipients of the
+    # MSI get a copy of the licence with the binaries.
+    $licensePath = Join-Path $RepoRoot 'LICENSE'
+    if (-not (Test-Path -LiteralPath $licensePath)) {
+        throw "LICENSE not found at $licensePath"
+    }
+    $candleCommon += "-dLicensePath=$licensePath"
+
     $iconPath = Join-Path $RepoRoot 'windows\runner\resources\app_icon.ico'
     if (Test-Path -LiteralPath $iconPath) {
         $candleCommon += "-dIconPath=$iconPath"

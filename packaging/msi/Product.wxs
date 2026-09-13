@@ -13,6 +13,7 @@
     ProductVersion  MSI product version, e.g. "0.1.0" (numeric x.y.z)
     ReleaseDir      path to the Release folder harvested by heat.exe
     LicenseRtf      path to the licence text shown by the UI
+    LicensePath     path to the repository LICENSE file, installed as-is
   Optional:
     IconPath        path to app_icon.ico. When defined the shortcut and the
                     Add/Remove Programs entry use it.
@@ -75,6 +76,8 @@
              Absent="disallow">
       <!-- Files harvested from the Release folder by heat.exe. -->
       <ComponentGroupRef Id="AppFiles" />
+      <!-- The licence text, installed next to the executable. -->
+      <ComponentRef Id="LicenseFile" />
     </Feature>
 
     <!-- Optional, selected by default; clearing it on the Customize page skips
@@ -85,6 +88,24 @@
              Level="1">
       <ComponentRef Id="ApplicationShortcut" />
     </Feature>
+
+    <!-- Apache-2.0 section 4 requires every recipient of a binary distribution
+         to get a copy of the licence, so the repository LICENSE is installed
+         next to the executable. The Source path is passed in by build-msi.ps1;
+         the fixed GUID keeps upgrades recognising the same component. -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="LicenseFile"
+                 Guid="70099CC1-6EDB-4D57-A5E7-4E328841CAA5"
+                 Win64="yes">
+        <!-- Named with an extension so it opens in a text editor on Windows;
+             the repository copy stays plain "LICENSE" for tooling that looks
+             it up by that exact name. -->
+        <File Id="LicenseFile"
+              Name="LICENSE.txt"
+              Source="$(var.LicensePath)"
+              KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
 
     <!-- Start Menu shortcut. The registry value is the component key path so
          the component can be installed without owning a file. -->
