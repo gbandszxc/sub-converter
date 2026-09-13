@@ -311,11 +311,13 @@ themselves are language-neutral.
 ## System fonts
 
 The app pins its text families instead of trusting the engine's runtime fallback, which renders
-CJK with uneven weights. The policy lives in `lib/platform/app_typography.dart` (pure data, no
-Flutter): a curated default per platform — Microsoft YaHei UI on Windows, PingFang SC on macOS,
-Noto Sans CJK SC on Linux — plus an ordered CJK-aware fallback chain that applies on top of
-whatever family is active, so a user-chosen font that lacks Chinese glyphs still renders them
-consistently.
+CJK with uneven weights. The full set of pitfalls behind this section (per-OS default sources,
+GDI vs DirectWrite family models, the w500 trap, MSI same-version reinstalls) is written up as
+a reusable experience summary in [`FONT_LESSONS.md`](FONT_LESSONS.md). The policy lives in
+`lib/platform/app_typography.dart` (pure data, no Flutter): a curated default per platform —
+Microsoft YaHei UI on Windows, PingFang SC on macOS, Noto Sans CJK SC on Linux — plus an
+ordered CJK-aware fallback chain that applies on top of whatever family is active, so a
+user-chosen font that lacks Chinese glyphs still renders them consistently.
 
 `lib/platform/system_fonts.dart` wraps the `sub_converter/fonts` method channel; each runner
 implements it natively:

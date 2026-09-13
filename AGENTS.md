@@ -85,6 +85,7 @@ packaging/macos/build-dmg.sh
 |---|---|---|
 | [`README.md`](README.md) / [`README.zh-CN.md`](README.zh-CN.md) | 面向用户：支持的格式与各格式「保留/丢弃」清单、使用与构建、MSI、选项、编码、测试数量、跨平台验证结果、范围 | 功能增删、选项或默认值变化、构建/打包方式变化、**测试数量变化**、某格式的保留/丢弃清单变化、SDK 或依赖要求变化、跨平台验证结果变化 |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 分层与数据流、模型、扩展点、有损转换策略、文件安全规则、有意保留的 v0.1 简化项 | 模块边界或分层变化、新增服务或格式、模型字段变化、文件安全规则变化、简化项增减 |
+| [`docs/FONT_LESSONS.md`](docs/FONT_LESSONS.md) | 系统字体/字体选择的踩坑经验总结（面向开发的参考文档，非规范）：默认字体来源、GDI/DirectWrite 字族差异、w500 字重坑、MSI 同版本覆盖 | **经验文档，不随代码强制同步**；新增同类踩坑经验时追加对应章节即可 |
 | [`packaging/msi/README.md`](packaging/msi/README.md) | MSI 构建方式与参数、**打包内容**、安装行为、静默安装 | 打包内容变化（新增 DLL/目录/插件）、脚本参数变化、安装行为变化（安装范围、快捷方式默认值）、WiX 版本变化 |
 | [`packaging/macos/README.md`](packaging/macos/README.md) | DMG 构建方式与参数、**镜像内容**、签名与 Gatekeeper 行为、entitlements | 镜像内容变化、脚本参数变化、签名或公证方式变化、Xcode 或 Flutter 产物路径要求变化 |
 | [`packaging/msi/license.rtf`](packaging/msi/license.rtf) | 安装包许可页文本（当前为占位） | **对外分发前必须替换为真实 EULA**；内置第三方组件变化时同步说明 |
