@@ -33,12 +33,18 @@ class WindowCloseChannel with WindowListener {
     }
   }
 
-  /// Performs the close the user confirmed: lifts the guard, then destroys
-  /// the window.
+  /// Performs the close the user confirmed: lifts the guard, then closes the
+  /// window.
+  ///
+  /// `close()` and not `destroy()`: the native WM_CLOSE destroys the window
+  /// and shuts the engine down while the message loop is still pumping, which
+  /// exits in well under a second. `destroy()` only posts WM_QUIT, leaving
+  /// the engine/window teardown to run without a message pump, which keeps
+  /// the window visible and frozen for several seconds.
   Future<void> closeNow() async {
     try {
       await windowManager.setPreventClose(false);
-      await windowManager.destroy();
+      await windowManager.close();
     } catch (_) {
       // No plugin: nothing to close, and the host handles its own lifecycle.
     }

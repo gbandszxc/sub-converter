@@ -33,6 +33,11 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
   final WindowCloseChannel _closeChannel = WindowCloseChannel();
   bool _exitDialogOpen = false;
 
+  /// Set once the user confirmed quitting: `close()` re-enters the close
+  /// handler before the window is gone, and that must not show the
+  /// confirmation dialog again.
+  bool _quitting = false;
+
   @override
   void initState() {
     super.initState();
@@ -92,7 +97,7 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
   /// The strings resolve the same way `build` does: the user's pick, else the
   /// platform locale.
   Future<void> _showExitConfirm() async {
-    if (_exitDialogOpen) {
+    if (_exitDialogOpen || _quitting) {
       return;
     }
     final NavigatorState? navigator = _navigatorKey.currentState;
@@ -113,7 +118,10 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
       barrierDismissible: false,
       builder: (BuildContext context) => ExitConfirmDialog(
         strings: strings,
-        onConfirm: () => _closeChannel.closeNow(),
+        onConfirm: () {
+          _quitting = true;
+          _closeChannel.closeNow();
+        },
         onCancel: () {},
       ),
     );
