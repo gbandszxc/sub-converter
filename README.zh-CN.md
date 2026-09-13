@@ -182,8 +182,10 @@ flutter test
 ## 跨平台验证
 
 三个目标操作系统都在真实机器上通过 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
-验证。每个 job 都会运行 `flutter analyze`、完整测试、release 构建，然后**启动产物并确认进程
-仍然存活**，因此不会把「能编译」误当成「能运行」。
+验证。该 workflow **仅手动触发**（`workflow_dispatch`），push / PR 不再自动运行。每个 job
+都会运行 `flutter analyze`、完整测试、release 构建，然后**启动产物并确认进程仍然存活**，
+因此不会把「能编译」误当成「能运行」。Windows job 额外打包 MSI，macOS job 额外打包 DMG，
+均作为 workflow artifact 上传。
 
 | 平台 | Runner | 测试 | Release 构建 | 启动 |
 | --- | --- | --- | --- | --- |

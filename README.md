@@ -203,9 +203,12 @@ The suite currently contains **383 tests, all passing**. Coverage:
 ## Cross-platform verification
 
 All three target operating systems are verified on real machines by
-`.github/workflows/ci.yml`. Each job runs `flutter analyze`, the full test suite, a
-release build, and then **launches the built artifact and asserts it stays alive**, so
-"it builds" is never mistaken for "it runs".
+`.github/workflows/ci.yml`. The workflow runs **manually only**
+(`workflow_dispatch`); pushes and PRs do not trigger it. Each job runs
+`flutter analyze`, the full test suite, a release build, and then **launches the
+built artifact and asserts it stays alive**, so "it builds" is never mistaken
+for "it runs". The Windows job additionally packs an MSI and the macOS job a
+DMG, both uploaded as workflow artifacts.
 
 | Target | Runner | Tests | Release build | Launches |
 | --- | --- | --- | --- | --- |

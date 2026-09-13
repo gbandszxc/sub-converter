@@ -40,8 +40,9 @@ packaging/macos/build-dmg.sh
 # 产物：build/dmg/sub-converter-<version>.dmg
 ```
 
-三平台 CI（测试 + release 构建 + 启动产物）定义在 `.github/workflows/ci.yml`，push 到 `main`
-即触发。
+三平台 CI（测试 + release 构建 + 启动检查 + Windows 打 MSI / macOS 打 DMG 并上传
+artifact）定义在 `.github/workflows/ci.yml`，**仅手动触发**（`workflow_dispatch`），
+push / PR 不再自动跑。
 
 ## 4. 硬性约定（改动前确认不会破坏）
 
