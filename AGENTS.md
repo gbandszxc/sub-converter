@@ -64,6 +64,7 @@ push / PR 不再自动跑。
 | 控制标签不得留在可见文本里 | `{\an8}{\bord2}Hello` 必须变成 `Hello` | `test/core/markup_regression_test.dart`、`test/formats/ass_test.dart` |
 | 检测不能只看扩展名 | 内容优先，扩展名只是加分项 | `test/services/conversion_matrix_test.dart` |
 | 无网络、无外部进程 | 不得引入 ffmpeg / Python / Node / HTTP 调用 | 审查 + 依赖白名单 |
+| 二进制分发必须随附许可证全文 | 项目以 Apache-2.0 发布，第 4 条要求每个二进制分发都带上许可证副本：MSI 把根 `LICENSE` 装成安装目录下的 `LICENSE.txt`，DMG 把同样的副本放进镜像。两个打包脚本在根 `LICENSE` 缺失时直接报错 | `packaging/msi/Product.wxs` 的 `LicenseFile` 组件与 `build-msi.ps1`、`packaging/macos/build-dmg.sh`（CI 两个 job 都会构建，缺文件即失败） |
 | 只做 v0.1 范围 | 不加入播放、预览、OCR、翻译、下载、账号、云同步等 | README「范围」段 |
 | 注释用英文 | 代码与脚本注释用英文；面向用户的文档中英各一份；提交信息描述可用中文或英文（本仓库历史两者都有） | 审查 |
 | 界面文案必须双语齐备 | 新增/修改任何用户可见文案，必须同时改 `lib/i18n/strings_en.dart` 与 `strings_zh.dart`；基类是抽象类，漏翻即编译错误 | `test/i18n/strings_test.dart`（另查空串、查中文误留英文） |
@@ -91,7 +92,8 @@ push / PR 不再自动跑。
 | [`docs/FONT_LESSONS.md`](docs/FONT_LESSONS.md) | 系统字体/字体选择的踩坑经验总结（面向开发的参考文档，非规范）：默认字体来源、GDI/DirectWrite 字族差异、w500 字重坑、MSI 同版本覆盖 | **经验文档，不随代码强制同步**；新增同类踩坑经验时追加对应章节即可 |
 | [`packaging/msi/README.md`](packaging/msi/README.md) | MSI 构建方式与参数、**打包内容**、安装行为、静默安装 | 打包内容变化（新增 DLL/目录/插件）、脚本参数变化、安装行为变化（安装范围、快捷方式默认值）、WiX 版本变化 |
 | [`packaging/macos/README.md`](packaging/macos/README.md) | DMG 构建方式与参数、**镜像内容**、签名与 Gatekeeper 行为、entitlements | 镜像内容变化、脚本参数变化、签名或公证方式变化、Xcode 或 Flutter 产物路径要求变化 |
-| [`packaging/msi/license.rtf`](packaging/msi/license.rtf) | 安装包许可页文本（当前为占位） | **对外分发前必须替换为真实 EULA**；内置第三方组件变化时同步说明 |
+| [`LICENSE`](LICENSE) | Apache License 2.0 全文（版权归属 `gbandszxc`）；MSI/DMG 里的副本都来自这个文件 | 更换许可证或版权归属变化时；同时改两份 README 的许可证段、`packaging/msi/license.rtf` 与 `Product.wxs` 的版权行 |
+| [`packaging/msi/license.rtf`](packaging/msi/license.rtf) | 安装包许可页文本：Apache-2.0 声明、许可证 URL、指向随装的 `LICENSE.txt` | 许可证或版权归属变化、内置第三方组件变化（`NOTICES.Z` 说明）时同步 |
 | `AGENTS.md`（本文件） | 开发规约、命令、硬性约定、文档地图 | 命令变化、测试数量变化、新增或移动文档（索引要同步）、新增硬性约定 |
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | 三平台测试/构建/启动检查 | 支持平台、Flutter 版本、构建或启动检查步骤变化 |
 
@@ -131,7 +133,7 @@ push / PR 不再自动跑。
 
 ```bash
 flutter analyze   # 0 issue
-flutter test      # 全绿（当前 383）
+flutter test      # 全绿（当前 390）
 ```
 
 - [ ] 若改动用户可见行为 → 更新两份 README；涉及打包 → 更新 `packaging/msi/README.md`

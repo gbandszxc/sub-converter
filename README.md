@@ -311,6 +311,8 @@ docs/ARCHITECTURE.md            Layering, data flow, model, extension points,
                                 loss policy and file-safety rules.
 AGENTS.md                       Dev conventions and the document index with
                                 maintenance triggers.
+LICENSE                         Apache License 2.0, the licence this project
+                                ships under.
 README.zh-CN.md                 Chinese translation of this file.
 ```
 
@@ -322,3 +324,13 @@ updated.
 All processing happens locally inside the app. There is no network code, no telemetry and no
 upload path: subtitle content is read from disk, converted in memory and written back to disk.
 Nothing is ever sent anywhere.
+
+## License
+
+Released under the [Apache License 2.0](LICENSE). You may use, modify and redistribute this
+app, including commercially, as long as you keep the copyright and licence notices and state
+what you changed; the licence also grants an express patent licence.
+
+Third-party components keep their own licences. Their full texts ship with every release build
+(`data/flutter_assets/NOTICES.Z`) and are linked from each project's repository. The Apache
+text is also shown on the installer's licence page and installed next to the application.
