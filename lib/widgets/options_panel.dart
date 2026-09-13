@@ -233,6 +233,9 @@ class OptionsPanel extends StatelessWidget {
       title: SectionLabel(
         strings.stripMediaSuffix,
         tooltip: strings.stripMediaSuffixHelp,
+        // An inline row label, not a section heading: it must weigh the
+        // same as the BOM checkbox title above it.
+        style: AppTextStyles.body,
       ),
     );
   }

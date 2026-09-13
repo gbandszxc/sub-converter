@@ -4,6 +4,7 @@ import 'package:sub_converter/i18n/strings_en.dart';
 import 'package:sub_converter/main.dart';
 import 'package:sub_converter/screens/app_controller.dart';
 import 'package:sub_converter/services/settings_store.dart';
+import 'package:sub_converter/widgets/ui_constants.dart';
 
 import 'fakes.dart';
 
@@ -188,6 +189,41 @@ void main() {
       expectEveryAmbientStyleHasFamily(find.text(en.outputSourceFolder), 'radio row');
       expectEveryAmbientStyleHasFamily(find.text(en.writeBom), 'checkbox row');
       expectEveryAmbientStyleHasFamily(find.text(en.clear), 'button label');
+    });
+
+    testWidgets('inline checkbox labels do not render semibold', (
+      WidgetTester tester,
+    ) async {
+      await useDesktopWindow(tester);
+      tester.platformDispatcher.localeTestValue = const Locale('en', 'US');
+      addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+      final AppController controller = testController(
+        systemFonts: systemFonts,
+        platformName: 'windows',
+      );
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(SubtitleConverterApp(controller: controller));
+      await tester.pumpAndSettle();
+
+      // The media-suffix label is an inline row label that happens to carry a
+      // tooltip icon, not a section heading; SectionLabel's default semibold
+      // title style made it weigh more than the BOM checkbox row above it.
+      // Inline labels share the body style with their sibling rows; the
+      // regular weight itself comes from the theme.
+      expect(
+        tester.widget<Text>(find.text(en.stripMediaSuffix)).style,
+        same(AppTextStyles.body),
+      );
+      expect(
+        tester.widget<Text>(find.text(en.writeBom)).style,
+        same(AppTextStyles.body),
+      );
+      // Real section headings keep the semibold hierarchy.
+      expect(
+        tester.widget<Text>(find.text(en.conflict)).style,
+        same(AppTextStyles.sectionTitle),
+      );
     });
 
     testWidgets('picks a font, renders it, and shows the system default',

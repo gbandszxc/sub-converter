@@ -8,10 +8,15 @@ import 'ui_constants.dart';
 /// which keeps the panel compact; the icon next to the title is the hover
 /// target. Without a [tooltip] this renders the plain title.
 class SectionLabel extends StatelessWidget {
-  const SectionLabel(this.text, {super.key, this.tooltip});
+  const SectionLabel(this.text, {super.key, this.tooltip, this.style});
 
   final String text;
   final String? tooltip;
+
+  /// Defaults to the semibold section-title look. Inline labels that sit
+  /// inside a control row (e.g. a checkbox title) must pass
+  /// [AppTextStyles.body] instead, so they weigh the same as their siblings.
+  final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +26,9 @@ class SectionLabel extends StatelessWidget {
       children: <Widget>[
         // Flexible so a long title wraps in narrow containers (e.g. a
         // ListTile title) instead of overflowing the Row.
-        Flexible(child: Text(text, style: AppTextStyles.sectionTitle)),
+        Flexible(
+          child: Text(text, style: style ?? AppTextStyles.sectionTitle),
+        ),
         if (tooltip != null && tooltip.trim().isNotEmpty) ...<Widget>[
           const SizedBox(width: AppSpacing.xs),
           Tooltip(
