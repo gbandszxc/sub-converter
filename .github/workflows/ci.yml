@@ -1,8 +1,15 @@
 name: CI
 
 # Manual only: package builds (MSI/DMG) are slow, so CI never runs on push/PR.
+# "Version" overrides the pubspec version for the MSI/DMG artifacts; leave
+# empty to use the pubspec version as-is.
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for the MSI/DMG (x.y.z); empty = pubspec version'
+        required: false
+        default: ''
 
 env:
   FLUTTER_CHANNEL: stable
@@ -85,7 +92,7 @@ jobs:
             exit 1
           fi
       - name: Build DMG
-        run: bash packaging/macos/build-dmg.sh --skip-build
+        run: bash packaging/macos/build-dmg.sh --skip-build --version "${{ inputs.version }}"
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
@@ -122,7 +129,7 @@ jobs:
           Stop-Process -Id $process.Id -Force
       - name: Build MSI
         shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1 -SkipBuild
+        run: powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1 -SkipBuild -Version "${{ inputs.version }}"
       - name: Upload MSI
         uses: actions/upload-artifact@v4
         with:
