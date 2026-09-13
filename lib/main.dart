@@ -48,6 +48,10 @@ class _SubtitleConverterAppState extends State<SubtitleConverterApp> {
 
   @override
   void dispose() {
+    // Drop the window listener so the plugin singleton never holds a guard
+    // whose widget tree is gone (relevant in tests; the real window only
+    // tears down at process exit).
+    _closeChannel.detach();
     if (_ownsController) {
       _controller.dispose();
     }

@@ -17,7 +17,7 @@
 ```bash
 flutter pub get
 flutter analyze                  # 必须 "No issues found!"（0 issue）
-flutter test                     # 必须全绿；当前 386 个测试
+flutter test                     # 必须全绿；当前 390 个测试
 flutter build windows --release  # 产物 build\windows\x64\runner\Release\
 flutter build macos   --release
 flutter build linux   --release

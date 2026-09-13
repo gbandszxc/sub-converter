@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:window_manager/window_manager.dart';
 
 /// Bridges to the `window_manager` plugin for the one thing this app needs
@@ -13,11 +14,17 @@ class WindowCloseChannel with WindowListener {
   void Function()? _onUserCloseRequested;
   bool _listening = false;
 
+  /// Whether this channel is currently registered as a window listener,
+  /// i.e. it actually took over the window close.
+  @visibleForTesting
+  bool get isListening => _listening;
+
   /// Marks the window close as interceptable and calls [handler] whenever
   /// the user asks the window to close (title bar X, Alt+F4, ...).
   ///
   /// Returns `false` when the plugin is unavailable, in which case the
-  /// window keeps its default close behavior and [handler] never fires.
+  /// window keeps its default close behavior, [handler] never fires, and
+  /// nothing is left registered on the plugin singleton.
   Future<bool> interceptClose(void Function() handler) async {
     _onUserCloseRequested = handler;
     try {
@@ -29,8 +36,23 @@ class WindowCloseChannel with WindowListener {
       await windowManager.setPreventClose(true);
       return true;
     } catch (_) {
+      // The guard never took effect: stop holding this channel (and whatever
+      // it captures) on the plugin's global listener list.
+      detach();
       return false;
     }
+  }
+
+  /// Stops intercepting: unregisters from the plugin and drops the handler.
+  ///
+  /// Safe to call when never attached. Called when the guard install fails
+  /// and when the owning widget state is disposed.
+  void detach() {
+    if (_listening) {
+      windowManager.removeListener(this);
+      _listening = false;
+    }
+    _onUserCloseRequested = null;
   }
 
   /// Performs the close the user confirmed: lifts the guard, then closes the
