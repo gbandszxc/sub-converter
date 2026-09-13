@@ -67,6 +67,24 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 覆盖旧版本。详细说明、静默安装参数与打包内容见
 [`packaging/msi/README.md`](packaging/msi/README.md)。
 
+### 构建 macOS 磁盘映像（DMG）
+
+macOS 发布版可以打成拖拽安装的磁盘映像。只用到 macOS 自带的 `hdiutil`，因此无需安装任何
+东西，也不需要联网：
+
+```bash
+packaging/macos/build-dmg.sh
+```
+
+该命令会执行 `flutter build macos --release`，并生成
+`build/dmg/sub-converter-<version>.dmg`——压缩映像，内含 app 与指向 `/Applications` 的软链，
+因此挂载后的窗口即为拖拽安装界面。加 `--skip-build` 可复用已有 Release 产物；加
+`--version x.y.z` 可覆盖从 `pubspec.yaml` 读取的版本号。
+
+app 由 Flutter 构建以 **ad-hoc** 方式签名：该映像在构建它的机器上可运行，但拷到别的 Mac 上
+会被 Gatekeeper 拦截，除非先用 Developer ID 签名并公证。macOS 构建还需要已安装并接受许可的
+Xcode。详细说明与映像内容见 [`packaging/macos/README.md`](packaging/macos/README.md)。
+
 ### 环境要求
 
 `pubspec.yaml` 声明 `environment: sdk: ^3.13.3`，即需要 Dart 3.13.3（或更高的 3.x）SDK。
@@ -245,6 +263,8 @@ test/
   fixtures/                     各格式的真实样例文件。
 packaging/
   msi/                          Windows 安装包的 WiX v3 定义、构建脚本与资源；
+                                详见其自带 README。
+  macos/                        用 hdiutil 把发布版打成拖拽安装磁盘映像的脚本；
                                 详见其自带 README。
 .github/workflows/ci.yml        Windows/macOS/Linux 三平台的测试、构建与启动检查。
 docs/ARCHITECTURE.md            分层与数据流、模型、扩展点、有损策略与文件安全规则。

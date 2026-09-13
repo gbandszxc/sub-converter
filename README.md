@@ -72,6 +72,26 @@ registers an entry in Add/Remove Programs with the app icon, and `MajorUpgrade` 
 versions. See [`packaging/msi/README.md`](packaging/msi/README.md) for details, silent-install
 flags and what the package contains.
 
+### Build a macOS disk image (DMG)
+
+The macOS build can be packaged as a drag-to-install disk image. It uses only `hdiutil`, which
+ships with macOS, so there is nothing to install and no network access is needed:
+
+```bash
+packaging/macos/build-dmg.sh
+```
+
+That runs `flutter build macos --release` and writes
+`build/dmg/sub-converter-<version>.dmg` — a compressed image containing the app plus an
+`/Applications` symlink, so the mounted window works as drag-to-install. Pass `--skip-build` to
+package an existing release build, or `--version x.y.z` to override the version taken from
+`pubspec.yaml`.
+
+The app is signed **ad-hoc** by the Flutter build: the image runs on the machine that built it,
+but copying it to another Mac trips Gatekeeper until the app is signed with a Developer ID and
+notarised. macOS builds also need Xcode with its licence accepted. See
+[`packaging/macos/README.md`](packaging/macos/README.md) for details and what the image contains.
+
 ### Requirements
 
 `pubspec.yaml` declares `environment: sdk: ^3.13.3`, so a Dart 3.13.3 (or later 3.x) SDK is
@@ -262,6 +282,9 @@ test/
 packaging/
   msi/                          WiX v3 definition, build script and assets for
                                 the Windows installer; see its own README.
+  macos/                        hdiutil script that packages the release build
+                                into a drag-to-install disk image; see its own
+                                README.
 .github/workflows/ci.yml        Tests, release builds and launch checks on
                                 Windows, macOS and Linux.
 docs/ARCHITECTURE.md            Layering, data flow, model, extension points,

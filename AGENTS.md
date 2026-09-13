@@ -31,6 +31,14 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 # 产物：build\msi\sub-converter-<version>.msi
 ```
 
+打 DMG（只用 macOS 自带的 `hdiutil`，无需安装任何东西；前提是已装 Xcode 并接受许可）：
+
+```bash
+packaging/macos/build-dmg.sh
+# 可选：--skip-build  --version 0.2.0  --configuration release  --flutter-exe <路径>
+# 产物：build/dmg/sub-converter-<version>.dmg
+```
+
 三平台 CI（测试 + release 构建 + 启动产物）定义在 `.github/workflows/ci.yml`，push 到 `main`
 即触发。
 
@@ -62,9 +70,12 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 | MSI 开始菜单必须用 `ProgramMenuFolder` | 它是 MSI 的系统文件夹属性（per-machine 时解析到 all-users 开始菜单）；`CommonProgramsFolder` **不是** MSI 属性，会被静默回退到 `TARGETDIR` | `packaging/msi/Product.wxs` 注释 + 安装日志（`/l*v`） |
 | 同版本重装必须能覆盖旧文件 | `MajorUpgrade` 必须带 `AllowSameVersionUpgrades="yes"`：exe/dll 的文件版本跟 pubspec 版本走，不带它时重装同版本 MSI 会保留旧版本文件（尤其 `sub_converter.exe`），并在控制面板重复注册产品 | `packaging/msi/Product.wxs` 注释 + `packaging/msi/README.md` 安装行为 |
 | WiX 告警要么修要么写清理由 | `-sreg` 关掉 DLL self-reg 探测；ICE60 因 `MaterialIcons-Regular.otf` 是 Flutter 资源、**不该**注册为系统字体而有意抑制 | `packaging/msi/build-msi.ps1` 注释 |
+| macOS 沙盒必须保留文件访问权限 | `macos/Runner/Release.entitlements` 与 `DebugProfile.entitlements` 都必须保留 `com.apple.security.files.user-selected.read-write`；缺了它 `file_selector` 仍能弹出选择框，但沙盒会拒绝用户选中的每个路径，release 包里既加不了文件也写不出结果（CI 的 macOS job 只验证启动，抓不到这一层） | `packaging/macos/README.md`、`docs/ARCHITECTURE.md` File safety 段；实机核对：`codesign -d --entitlements - <app>` |
+| DMG 只用系统自带工具 | `packaging/macos/build-dmg.sh` 只用 macOS 自带的 `hdiutil`：不下载工具、不需要管理员权限、不联网（不同于需下载便携版 WiX 的 MSI） | 审查 |
 
 **提交信息**：conventional commits（`feat(formats):` / `fix(services):` / `test(ui):` /
-`docs:` / `build(msi):` / `chore:`），一个任务一个提交；长流程分批提交，不要最后攒一块。
+`docs:` / `build(msi):` / `build(dmg):` / `chore:`），一个任务一个提交；长流程分批提交，
+不要最后攒一块。
 
 ## 4. 文档地图与同步义务
 
@@ -75,6 +86,7 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
 | [`README.md`](README.md) / [`README.zh-CN.md`](README.zh-CN.md) | 面向用户：支持的格式与各格式「保留/丢弃」清单、使用与构建、MSI、选项、编码、测试数量、跨平台验证结果、范围 | 功能增删、选项或默认值变化、构建/打包方式变化、**测试数量变化**、某格式的保留/丢弃清单变化、SDK 或依赖要求变化、跨平台验证结果变化 |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 分层与数据流、模型、扩展点、有损转换策略、文件安全规则、有意保留的 v0.1 简化项 | 模块边界或分层变化、新增服务或格式、模型字段变化、文件安全规则变化、简化项增减 |
 | [`packaging/msi/README.md`](packaging/msi/README.md) | MSI 构建方式与参数、**打包内容**、安装行为、静默安装 | 打包内容变化（新增 DLL/目录/插件）、脚本参数变化、安装行为变化（安装范围、快捷方式默认值）、WiX 版本变化 |
+| [`packaging/macos/README.md`](packaging/macos/README.md) | DMG 构建方式与参数、**镜像内容**、签名与 Gatekeeper 行为、entitlements | 镜像内容变化、脚本参数变化、签名或公证方式变化、Xcode 或 Flutter 产物路径要求变化 |
 | [`packaging/msi/license.rtf`](packaging/msi/license.rtf) | 安装包许可页文本（当前为占位） | **对外分发前必须替换为真实 EULA**；内置第三方组件变化时同步说明 |
 | `AGENTS.md`（本文件） | 开发规约、命令、硬性约定、文档地图 | 命令变化、测试数量变化、新增或移动文档（索引要同步）、新增硬性约定 |
 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | 三平台测试/构建/启动检查 | 支持平台、Flutter 版本、构建或启动检查步骤变化 |
@@ -89,8 +101,10 @@ powershell -ExecutionPolicy Bypass -File packaging\msi\build-msi.ps1
    校验：`flutter test` 结尾行的数字。
 2. **每格式的保留/丢弃清单** —— 两份 README 的表 + 各 writer 的 doc comment。
    校验：读 `lib/formats/*/*_writer.dart` 顶部注释。
-3. **Release 目录内容 / 打包内容** —— 两份 README、`packaging/msi/README.md`。
-   校验：`flutter build windows --release` 后 `ls build/windows/x64/runner/Release`。
+3. **Release 目录内容 / 打包内容** —— 两份 README、`packaging/msi/README.md`、
+   `packaging/macos/README.md`。校验：`flutter build windows --release` 后
+   `ls build/windows/x64/runner/Release`；`flutter build macos --release` 后
+   `ls build/macos/Build/Products/Release`。
 4. **版本号** —— `pubspec.yaml` 的 `version:`（MSI 版本由脚本从此解析，必须是 `x.y.z`）。
 5. **平台相关行为**（Windows 大小写不敏感去重；macOS/Linux 视为两个文件）—— 两份 README、
    `docs/ARCHITECTURE.md`。校验：`test/widget/app_controller_test.dart`。
@@ -116,4 +130,5 @@ flutter test      # 全绿（当前 369）
 - [ ] 若新增/删除测试 → 同步三处测试数量
 - [ ] 若新增格式 → 枚举 + parser + writer + descriptor + 一行注册 + fixtures + 测试，并核对两份 README 的格式表
 - [ ] 若改动打包布局 → 重跑 `build-msi.ps1`，并用 `msiexec /a` 或 `dark.exe` 核对 MSI 文件表
+- [ ] 若改动 macOS 打包 → 重跑 `packaging/macos/build-dmg.sh`，用 `hdiutil attach` 核对镜像内容，用 `codesign -d --entitlements -` 核对权限
 - [ ] 提交信息符合 conventional commits，且按任务分批提交
